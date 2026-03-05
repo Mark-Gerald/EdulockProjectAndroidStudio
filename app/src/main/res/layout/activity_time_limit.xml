@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1E1E2E">
+
+    <!-- Header section remains the same -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/back_arrow"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Variable time limits for sessions"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- Main content in ScrollView -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Note text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Note: When you open a specific app, EduLock will ask you to set a time limit for using it before access is restricted."
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Time Limit Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Set a Time Limit"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Time options container -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/rounded_dark_background"
+                android:padding="16dp"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:id="@+id/time_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="1 minutes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:padding="10dp"
+                    android:background="@drawable/selected_time_background"
+                    android:textAlignment="center"
+                    android:fontFamily="@font/trends"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/time_5"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="5 minutes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:padding="10dp"
+                    android:background="@drawable/time_option_background"
+                    android:textAlignment="center"
+                    android:fontFamily="@font/trends"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/time_10"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="10 minutes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:padding="10dp"
+                    android:textAlignment="center"
+                    android:fontFamily="@font/trends"
+                    android:background="@drawable/time_option_background"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/time_15"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="15 minutes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:padding="10dp"
+                    android:fontFamily="@font/trends"
+                    android:textAlignment="center"
+                    android:background="@drawable/time_option_background"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/time_20"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="20 minutes"
+                    android:textColor="#FFFFFF"
+                    android:fontFamily="@font/trends"
+                    android:textSize="16sp"
+                    android:padding="10dp"
+                    android:textAlignment="center"
+                    android:background="@drawable/time_option_background"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/time_25"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/trends"
+                    android:text="25 minutes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:padding="10dp"
+                    android:textAlignment="center"
+                    android:background="@drawable/time_option_background"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/time_30"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/trends"
+                    android:text="30 minutes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:padding="10dp"
+                    android:textAlignment="center"
+                    android:background="@drawable/time_option_background"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/time_35"
+                    android:layout_width="match_parent"
+                    android:fontFamily="@font/trends"
+                    android:layout_height="wrap_content"
+                    android:text="35 minutes"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textAlignment="center"
+                    android:padding="10dp"
+                    android:background="@drawable/time_option_background"/>
+
+            </LinearLayout>
+
+            <!-- App Selection Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select Apps"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
+
+            <SearchView
+                android:id="@+id/search_app"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:queryHint="Search App"
+                android:iconifiedByDefault="false"
+                android:background="@drawable/rounded_dark_background"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Apps List Container -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/rounded_dark_background">
+
+                <!-- Select All Option -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="12dp"
+                    android:gravity="center_vertical">
+
+                    <CheckBox
+                        android:id="@+id/select_all_checkbox"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="#FFFFFF"/>
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_select_all"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Select All"
+                        android:textColor="#FFFFFF"
+                        android:textSize="16sp"/>
+                </LinearLayout>
+
+                <!-- Apps Container -->
+                <LinearLayout
+                    android:id="@+id/apps_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+                    <!-- App items will be added here programmatically -->
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <!-- Button Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/cancel_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Cancel"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="true"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/cancel_button_background"
+            android:padding="12dp"/>
+
+        <Button
+            android:id="@+id/save_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Save"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="true"
+            android:background="@drawable/save_button_background"
+            android:padding="12dp"/>
+    </LinearLayout>
+
+</LinearLayout>

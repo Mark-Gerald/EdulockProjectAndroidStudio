@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/bottom_stats"
+        android:title="Stats"
+        android:icon="@drawable/baseline_pie_chart_24"/>
+
+    <item
+        android:id="@+id/bottom_control"
+        android:title="Control"
+        android:icon="@drawable/baseline_control_24"/>
+
+    <item
+        android:id="@+id/bottom_restrict"
+        android:title="Restrict"
+        android:icon="@drawable/baseline_app_blocking_24"/>
+
+</menu>

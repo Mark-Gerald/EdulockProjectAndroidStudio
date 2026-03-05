@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">EduLock</string>
+    <string name="navigation_drawer_open">Open Navigation Drawer</string>
+    <string name="navigation_drawer_close">Close Navigation Drawer</string>
+    <string name="action_settings">Settings</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="no_apps_found">No apps found</string>
+    <string name="restrictions_saved_message">Restrictions saved successfully</string>
+
+    <string name="grant_usage_stats_permission">Please grant usage stats permission</string>
+    <string name="grant_overlay_permission">Please grant overlay permission</string>
+    <string name="grant_alarm_permission">Please grant alarm permission</string>
+    <string name="app_blocked_message">%1$s is currently unavailable</string>
+    <string name="generic_blocked_message">This app is currently unavailable</string>
+    <string name="edulock_service_name">EduLock Service</string>
+    <string name="edulock_service_description">Shows when EduLock is monitoring app usage</string>
+    <string name="edulock_active">EduLock Active</string>
+    <string name="monitoring_apps_message">Monitoring %1$d apps with %2$d min limit</string>
+
+    <string name="accessibility_service_label">EduLock App Blocker</string>
+    <string name="accessibility_service_description">Controls app access based on time limits</string>
+
+    <string name="time_limit_reached_title">Time Limit Reached</string>
+    <string name="time_limit_reached">You have reached your %d minute limit for today.</string>
+    <string name="close">Close</string>
+    <string name="time_up_icon">Time Up Icon</string>
+
+
+    <string name="aiza">Aiza Alimania</string>
+    <string name="mark">Mark Gerald Pacun</string>
+    <string name="janna">Janna Dechoso</string>
+    <string name="ron">Ron Purisima</string>
+    <string name="jay">Ms. Jay Cabalce</string>
+    <string name="chard">Chard Zabala</string>
+
+    <string name="project_manager">Project Manager</string>
+    <string name="programmer">Programmer</string>
+    <string name="system_analyst">System Analyst</string>
+    <string name="debugger">Debugger</string>
+    <string name="research_teacher">Research Teacher</string>
+    <string name="adviser">Adviser</string>
+</resources>
