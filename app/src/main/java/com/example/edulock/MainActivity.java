@@ -7,12 +7,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -23,6 +27,40 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+        MaterialCardView card = findViewById(R.id.imageCard);
+
+        card.setAlpha(0f);
+        card.setTranslationY(200f);
+
+        card.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(800)
+                .start();
+
+        TextView welcome = findViewById(R.id.welcome);
+
+        welcome.setAlpha(0f);
+
+        welcome.animate()
+                .alpha(1f)
+                .setStartDelay(500)
+                .setDuration(800)
+                .start();
+
+        MaterialButton button = findViewById(R.id.accessUsageData);
+
+        button.setAlpha(0f);
+        button.setTranslationY(200f);
+
+        button.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(700)
+                .setDuration(600)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -38,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        Button button = findViewById(R.id.accessUsageData);
+
         button.setOnClickListener(v -> {
             if (!isAccessibilityServiceEnabled()) {
                 showAccessibilityDialog();
