@@ -49,6 +49,16 @@ public class MainActivity extends AppCompatActivity {
                 .setDuration(800)
                 .start();
 
+        TextView info = findViewById(R.id.info);
+
+        info.setAlpha(0f);
+
+        info.animate()
+                .alpha(1f)
+                .setStartDelay(500)
+                .setDuration(600)
+                .start();
+
         MaterialButton button = findViewById(R.id.accessUsageData);
 
         button.setAlpha(0f);

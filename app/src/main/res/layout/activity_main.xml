@@ -123,7 +123,7 @@
 
         app:cornerRadius="28dp"
         android:background="@drawable/modern_button_bg"
-        android:backgroundTint="@null"
+        app:backgroundTint="@null"
         app:rippleColor="@color/white"
 
         app:layout_constraintBottom_toBottomOf="parent"
