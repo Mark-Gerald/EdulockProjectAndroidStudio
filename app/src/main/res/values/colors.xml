@@ -18,4 +18,5 @@
     <color name="MudPurple">#65566b</color>
     <color name="DarkerViolet">#590f93</color>
     <color name="LightViolet">#cea6ef</color>
+    <color name="purple_500">#9C27B0</color>
 </resources>

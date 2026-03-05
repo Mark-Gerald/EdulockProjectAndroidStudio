@@ -8,6 +8,7 @@ import android.widget.CheckBox;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -45,12 +46,24 @@ public class termsAndAgreement extends AppCompatActivity {
             }
         });
 
+        ConstraintLayout root = findViewById(R.id.main);
+
+        root.setAlpha(0f);
+        root.setTranslationY(50f);
+
+        root.animate()
+                .alpha(1f)
+                        .translationY(0f)
+                                .setDuration(600)
+                                        .start();
+
         secondActivityButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                Intent intent = new Intent(termsAndAgreement.this,settingsGrantPermission.class);
+                Intent intent = new Intent(termsAndAgreement.this, settingsGrantPermission.class);
                 startActivity(intent);
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
             }
         });
     }
