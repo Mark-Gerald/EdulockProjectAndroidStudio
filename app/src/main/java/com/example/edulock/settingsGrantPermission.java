@@ -1,86 +1,83 @@
 package com.example.edulock;
 
-import android.app.AppOpsManager;
-import android.content.Context;
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.util.Log;
-import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+
+import com.google.android.material.button.MaterialButton;
 
 public class settingsGrantPermission extends AppCompatActivity {
 
-    private Button grantPermissionButton;
+    private static final int OVERLAY_PERMISSION_REQUEST_CODE = 1234;
+    private MaterialButton button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings_grant_permission);
 
-        // Handle edge-to-edge layout
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        button = findViewById(R.id.grantPermissionButton);
 
-        // Initialize the button
-        grantPermissionButton = findViewById(R.id.grantPermissionButton);
+        button.setOnClickListener(v -> {
 
-        // Update button state based on permission status
-        updateButtonState();
-
-        // Button click listener
-        grantPermissionButton.setOnClickListener(v -> {
-            if (!hasUsageAccessPermission()) {
-                // Redirect to Usage Access Settings
-                Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
-                startActivity(intent);
+            if (!Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE);
+            } else if (!isAccessibilityServiceEnabled()) {
+                showAccessibilityDialog();
             } else {
-                // Navigate to the next activity
-                navigateToNextActivity();
+                goToNextPage();
             }
         });
     }
 
-    @Override
-    protected void onResume() {
+    private boolean areAllPermissionGranted() {
+        return Settings.canDrawOverlays(this) && isAccessibilityServiceEnabled();
+    }
+
+
+    protected void onResume(){
         super.onResume();
-        // Update the button state when the activity resumes
-        updateButtonState();
-    }
 
-    // Check if the app has Usage Access Permission
-    private boolean hasUsageAccessPermission() {
-        try {
-            AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
-            int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    android.os.Process.myUid(), getPackageName());
-            return mode == AppOpsManager.MODE_ALLOWED;
-        } catch (Exception e) {
-            Log.e("PermissionCheck", "Error checking usage stats permission", e);
-            return false;
-        }
-    }
-
-    // Update the button text based on the permission status
-    private void updateButtonState() {
-        if (hasUsageAccessPermission()) {
-            grantPermissionButton.setText("Next");
+        if(areAllPermissionGranted()) {
+            button.setText("Next");
         } else {
-            grantPermissionButton.setText("Grant Permission");
+          button.setText("Grant Permission");
         }
     }
 
-    // Navigate to the next activity
-    private void navigateToNextActivity() {
+    private boolean isAccessibilityServiceEnabled() {
+        String serviceName = getPackageName() + "/" +
+                AppBlockerAccessibilityService.class.getCanonicalName();
+
+        String enabledServices = Settings.Secure.getString(
+                getContentResolver(),
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+
+        return enabledServices != null &&
+                enabledServices.contains(serviceName);
+    }
+
+    private void showAccessibilityDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Enable Accessibility")
+                .setMessage("EduLock needs accessibility permission to function properly")
+                .setPositiveButton("Settings", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void goToNextPage() {
         Intent intent = new Intent(this, all_done_activity.class);
         startActivity(intent);
-        finish();
     }
 }
