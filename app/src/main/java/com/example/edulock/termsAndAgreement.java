@@ -59,7 +59,9 @@ public class termsAndAgreement extends AppCompatActivity {
 
         secondActivityButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onClick(View v ) {
+
+                SoundManager.playButtonSound(termsAndAgreement.this);
 
                 Intent intent = new Intent(termsAndAgreement.this, settingsGrantPermission.class);
                 startActivity(intent);

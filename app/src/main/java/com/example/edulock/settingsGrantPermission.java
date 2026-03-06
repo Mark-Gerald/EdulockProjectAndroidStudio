@@ -142,6 +142,7 @@ public class settingsGrantPermission extends AppCompatActivity {
 
     private void goToNextPage() {
         Intent intent = new Intent(this, all_done_activity.class);
+        SoundManager.playButtonSound(this);
         startActivity(intent);
     }
 }

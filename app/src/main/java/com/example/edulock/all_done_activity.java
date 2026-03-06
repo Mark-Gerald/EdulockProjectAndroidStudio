@@ -95,6 +95,9 @@ public class all_done_activity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                SoundManager.playButtonSound(all_done_activity.this);
+
                 Intent intent = new Intent(all_done_activity.this, login_register.class);
                 startActivity(intent);
                 overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);

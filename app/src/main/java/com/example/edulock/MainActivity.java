@@ -66,6 +66,9 @@ public class MainActivity extends AppCompatActivity {
                 .start();
 
         button.setOnClickListener(v -> {
+
+            SoundManager.playButtonSound(this);
+
             Intent intent = new Intent(MainActivity.this, termsAndAgreement.class);
             startActivity(intent);
         });

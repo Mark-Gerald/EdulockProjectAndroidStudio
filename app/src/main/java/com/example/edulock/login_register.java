@@ -46,6 +46,17 @@ public class login_register extends AppCompatActivity {
             return insets;
         });
 
+        View card = findViewById(R.id.loginCard);
+
+        card.setAlpha(0f);
+        card.setTranslationY(80f);
+
+        card.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(700)
+                .start();
+
         // Initialize Firebase Auth
         auth = FirebaseAuth.getInstance();
 
@@ -89,6 +100,14 @@ public class login_register extends AppCompatActivity {
                 } else {
                     loginEmail.setError("Please Enter A Valid Email");
                 }
+
+                v.animate()
+                        .scaleX(0.95f)
+                        .scaleY(0.95f)
+                        .setDuration(80)
+                        .withEndAction(() -> {
+                            v.animate().scaleX(1f).scaleY(1f).setDuration(80);
+                        });
             }
         });
 
