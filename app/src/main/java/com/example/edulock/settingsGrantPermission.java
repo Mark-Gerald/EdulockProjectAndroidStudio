@@ -5,10 +5,13 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 
 public class settingsGrantPermission extends AppCompatActivity {
 
@@ -35,6 +38,56 @@ public class settingsGrantPermission extends AppCompatActivity {
                 goToNextPage();
             }
         });
+
+        MaterialCardView card = findViewById(R.id.bottomCanvas);
+        ImageView phone = findViewById(R.id.phoneImage);
+        TextView title = findViewById(R.id.accessAppUsage);
+
+        phone.setAlpha(0f);
+        phone.setTranslationY(-100f);
+
+        card.setAlpha(0f);
+        card.setTranslationY(300f);
+
+        title.setAlpha(0f);
+
+        button.setAlpha(0f);
+        button.setScaleX(0.8f);
+        button.setScaleY(0.8f);
+
+        //Phone Animation change if you want
+        phone.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(500)
+                .setDuration(1000)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start();
+
+        //Dark Background Animation change if you want
+        card.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(200)
+                .setDuration(700)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start();
+
+        //Title change if you want
+        title.animate()
+                .alpha(1f)
+                .setStartDelay(400)
+                .setDuration(500)
+                .start();
+
+        button.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setStartDelay(600)
+                .setDuration(400)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start();
     }
 
     private boolean areAllPermissionGranted() {
@@ -47,6 +100,17 @@ public class settingsGrantPermission extends AppCompatActivity {
 
         if(areAllPermissionGranted()) {
             button.setText("Next");
+
+            button.animate()
+                    .scaleX(1.05f)
+                    .scaleY(1.05f)
+                    .setDuration(200)
+                    .withEndAction(() ->
+                            button.animate()
+                                    .scaleX(1f)
+                                    .scaleY(1f)
+                                    .setDuration(200)
+                            );
         } else {
           button.setText("Grant Permission");
         }
