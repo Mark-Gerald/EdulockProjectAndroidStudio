@@ -55,6 +55,39 @@ public class register_signup extends AppCompatActivity {
 
         // Set up click listeners
         setupClickListeners();
+
+        View root = findViewById(R.id.main);
+
+        root.setAlpha(0f);
+        root.setTranslationY(80f);
+
+        root.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(600)
+                .start();
+        animateFormElements();
+    }
+
+    private void animateFormElements() {
+
+        View[] views = {signupFirstName, signupLastName, signupEmail, signupPassword, userTypeRadioGroup, signupButton, loginRedirectText};
+
+        int delay = 0;
+
+        for(View v : views){
+            v.setAlpha(0f);
+            v.setTranslationY(40f);
+
+            v.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setStartDelay(delay)
+                    .setDuration(400)
+                    .start();
+
+            delay += 80;
+        }
     }
 
     private void initializeUIElements() {
@@ -70,9 +103,21 @@ public class register_signup extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        signupButton.setOnClickListener(v -> registerUser());
+        signupButton.setOnClickListener(v -> {
+            v.animate()
+                    .scaleX(0.95f)
+                    .scaleY(0.95f)
+                    .setDuration(100)
+                    .withEndAction(() -> {
+                        v.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
+                        registerUser();
+                    })
+                    .start();
+        });
         loginRedirectText.setOnClickListener(v -> {
-            startActivity(new Intent(register_signup.this, login_register.class));
+            Intent intent = new Intent(register_signup.this, login_register.class);
+            startActivity(intent);
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
             finish();
         });
     }

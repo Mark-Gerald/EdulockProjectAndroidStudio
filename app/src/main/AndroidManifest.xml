@@ -50,6 +50,7 @@
             android:windowSoftInputMode="adjustResize"/>
         <activity
             android:name=".register_signup"
+            android:windowSoftInputMode="adjustResize"
             android:exported="false" />
         <activity
             android:name=".all_done_activity"
