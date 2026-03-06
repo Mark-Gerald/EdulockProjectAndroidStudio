@@ -13,6 +13,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.drawable.AnimationDrawable;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -20,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.widget.NestedScrollView;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -46,6 +48,14 @@ public class login_register extends AppCompatActivity {
             return insets;
         });
 
+        NestedScrollView root = findViewById(R.id.main);
+
+        AnimationDrawable animationDrawable = (AnimationDrawable) root.getBackground();
+
+        animationDrawable.setEnterFadeDuration(2000);
+        animationDrawable.setExitFadeDuration(20000);
+        animationDrawable.start();
+
         View card = findViewById(R.id.loginCard);
 
         card.setAlpha(0f);
@@ -66,6 +76,18 @@ public class login_register extends AppCompatActivity {
         signupRedirectText = findViewById(R.id.loginRedirectText); // Correct ID here
         loginButton = findViewById(R.id.signup_button);
 
+        loginButton.animate()
+                .scaleX(0.95f)
+                .scaleY(0.95f)
+                .setDuration(80)
+                .withEndAction(() ->
+                        loginButton.animate()
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(80)
+                                .start())
+                .start();
+
         // Style "Sign Up" text with underline and color
         styleSignUpRedirect();
 
@@ -83,8 +105,25 @@ public class login_register extends AppCompatActivity {
                                     @Override
                                     public void onSuccess(AuthResult authResult) {
                                         Toast.makeText(login_register.this, "Login Successful", Toast.LENGTH_SHORT).show();
-                                        startActivity(new Intent(login_register.this, statistics_usage_data.class));
-                                        finish();
+                                        View loginCard = findViewById(R.id.loginCard);
+
+                                        SoundManager.playButtonSound(login_register.this);
+
+                                        loginCard.animate()
+                                                .alpha(0f)
+                                                .translationY(-50f)
+                                                .setDuration(400)
+                                                .withEndAction(() -> {
+
+                                                    Intent intent = new Intent(login_register.this, statistics_usage_data.class);
+                                                    startActivity(intent);
+
+                                                    overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.fade_out);
+
+                                                    finish();
+
+                                                })
+                                                .start();
                                     }
                                 }).addOnFailureListener(new OnFailureListener() {
                                     @Override
