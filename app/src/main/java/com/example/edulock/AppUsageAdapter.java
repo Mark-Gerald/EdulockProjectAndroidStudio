@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -31,14 +32,15 @@ public class AppUsageAdapter extends RecyclerView.Adapter<AppUsageAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        AppUsageInfo appUsageInfo = appUsageList.get(position);
-        holder.appName.setText(appUsageInfo.getAppName());
-        holder.usageTime.setText(formatTime(appUsageInfo.getUsageTime()));
+        AppUsageInfo app = appUsageList.get(position);
 
-        // Set the color indicator to match pie chart
-        if (holder.colorIndicator != null) {
-            holder.colorIndicator.setBackgroundColor(appUsageInfo.getColor());
-        }
+        holder.appName.setText(app.getAppName());
+        holder.appTime.setText(formatTime(app.getUsageTime()));
+
+        long maxUsage = appUsageList.isEmpty() ? 1 : appUsageList.get(0).getUsageTime();
+
+        int progress = (int) ((app.getUsageTime() * 100) / maxUsage);
+        holder.usageProgress.setProgress(progress);
     }
 
     @Override
@@ -48,14 +50,14 @@ public class AppUsageAdapter extends RecyclerView.Adapter<AppUsageAdapter.ViewHo
 
     // ViewHolder class
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView appName, usageTime;
-        View colorIndicator;
+        TextView appName, appTime;
+        ProgressBar usageProgress;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             appName = itemView.findViewById(R.id.appName);
-            usageTime = itemView.findViewById(R.id.usageTime);
-            colorIndicator = itemView.findViewById(R.id.colorIndicator);
+            appTime = itemView.findViewById(R.id.appTime);
+            usageProgress = itemView.findViewById(R.id.usageProgress);
         }
     }
 

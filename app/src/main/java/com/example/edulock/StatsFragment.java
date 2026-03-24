@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Process;
 import android.provider.Settings;
@@ -26,21 +25,10 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.charts.PieChart;
-import com.github.mikephil.charting.components.Legend;
-import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.PieData;
-import com.github.mikephil.charting.data.PieDataSet;
-import com.github.mikephil.charting.data.PieEntry;
-import com.github.mikephil.charting.formatter.ValueFormatter;
-
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +37,6 @@ public class StatsFragment extends Fragment {
     private static final String TAG = "StatsFragment";
     private static final int MAX_APPS_IN_PIE_CHART = 5;
 
-    private PieChart pieChart;
-    private LineChart lineChart;
     private RecyclerView appUsageRecyclerView;
     private RecyclerView recentAppsRecyclerView;
     private EditText searchApps;
@@ -67,7 +53,6 @@ public class StatsFragment extends Fragment {
         packageManager = requireContext().getPackageManager();
 
         initializeViews(view);
-        setupCharts();
         setupAdapters();
         setupSearchListener();
 
@@ -81,27 +66,10 @@ public class StatsFragment extends Fragment {
     }
 
     private void initializeViews(View view) {
-        pieChart = view.findViewById(R.id.usagePieChart);
-        lineChart = view.findViewById(R.id.usageLineChart);
         appUsageRecyclerView = view.findViewById(R.id.appUsageRecyclerView);
         recentAppsRecyclerView = view.findViewById(R.id.recentAppsRecyclerView);
         searchApps = view.findViewById(R.id.searchApps);
         totalScreenTime = view.findViewById(R.id.totalScreenTime);
-    }
-
-    private void setupCharts() {
-        // Setup Pie Chart
-        pieChart.getDescription().setEnabled(false);
-        pieChart.setUsePercentValues(true);
-        pieChart.setExtraOffsets(5, 10, 5, 5);
-        pieChart.setDragDecelerationFrictionCoef(0.95f);
-        pieChart.setDrawHoleEnabled(true);
-        pieChart.setHoleColor(Color.TRANSPARENT); // Make hole transparent to match background
-        pieChart.setTransparentCircleRadius(0f); // Remove transparent circle
-        pieChart.setCenterText(""); // Remove center text
-
-        // Disable the legend (this removes the black text)
-        pieChart.getLegend().setEnabled(false);
     }
 
     private void setupAdapters() {
@@ -316,8 +284,6 @@ public class StatsFragment extends Fragment {
         List<AppUsageInfo> sortedAppUsage = new ArrayList<>(appUsage);
         Collections.sort(sortedAppUsage, (a, b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
 
-        updatePieChartData(sortedAppUsage);
-
         List<RecentAppInfo> sortedRecentApps = new ArrayList<>(recentApps);
         Collections.sort(sortedRecentApps, (a, b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
 
@@ -334,46 +300,6 @@ public class StatsFragment extends Fragment {
         recentAppsList.clear();
         recentAppsList.addAll(sortedRecentApps);
         recentAppsAdapter.updateData(sortedRecentApps);
-    }
-
-    private void updatePieChartData(List<AppUsageInfo> sortedAppUsage) {
-        ArrayList<PieEntry> entries = new ArrayList<>();
-        ArrayList<Integer> colors = new ArrayList<>();
-        int[] CHART_COLORS = {
-                Color.rgb(76, 175, 80),    // Green
-                Color.rgb(255, 193, 7),    // Yellow
-                Color.rgb(255, 87, 34),    // Orange
-                Color.rgb(33, 150, 243),   // Blue
-                Color.rgb(156, 39, 176)    // Purple
-        };
-
-        // Take top apps for pie chart
-        int appsToShow = Math.min(MAX_APPS_IN_PIE_CHART, sortedAppUsage.size());
-        for (int i = 0; i < appsToShow; i++) {
-            AppUsageInfo app = sortedAppUsage.get(i);
-            entries.add(new PieEntry((float) app.getUsageTime(), app.getAppName()));
-            int color = CHART_COLORS[i % CHART_COLORS.length];
-            colors.add(color);
-            app.setColor(color);
-        }
-
-        // Update pie chart
-        PieDataSet dataSet = new PieDataSet(entries, "Usage Statistics");
-        dataSet.setColors(colors);
-        dataSet.setValueTextColor(Color.WHITE);
-        dataSet.setValueTextSize(12f);
-        dataSet.setSliceSpace(2f);
-
-        PieData data = new PieData(dataSet);
-        data.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                return String.format("%.1f%%", value);
-            }
-        });
-
-        pieChart.setData(data);
-        pieChart.invalidate();
     }
 
     private String formatTime(long millis) {
