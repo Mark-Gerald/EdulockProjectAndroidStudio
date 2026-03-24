@@ -3,6 +3,7 @@ package com.example.edulock;
 import android.app.AlarmManager;
 import android.app.AppOpsManager;
 import android.app.PendingIntent;
+import android.app.usage.UsageEvents;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -140,39 +141,6 @@ public class StatsFragment extends Fragment {
         }
     }
 
-    private void loadAllUsageStats() {
-        UsageStatsManager usageStatsManager = (UsageStatsManager) requireContext()
-                .getSystemService(Context.USAGE_STATS_SERVICE);
-
-        if (usageStatsManager == null) {
-            Log.e(TAG, "UsageStatsManager is null");
-            return;
-        }
-
-        // Get midnight of current day
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        long startTime = calendar.getTimeInMillis();
-        long endTime = System.currentTimeMillis();
-
-        // Query for INTERVAL_DAILY to get more accurate results
-        List<UsageStats> stats = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, startTime, endTime);
-
-        if (stats != null && !stats.isEmpty()) {
-            Log.d(TAG, "Got " + stats.size() + " stats");
-            processUsageStats(stats);
-        } else {
-            Log.e(TAG, "No usage stats retrieved");
-            Toast.makeText(requireContext(),
-                    "Please enable usage access for EduLock",
-                    Toast.LENGTH_LONG).show();
-        }
-    }
-
     private boolean isUserApp(String packageName) {
         try {
             ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
@@ -186,75 +154,116 @@ public class StatsFragment extends Fragment {
         }
     }
 
-    private void processUsageStats(List<UsageStats> stats) {
-        Map<String, AppUsageInfo> appUsageMap = new HashMap<>();
-        Map<String, RecentAppInfo> recentAppsMap = new HashMap<>();
-        long totalUsageTime = 0;
+    private void loadAllUsageStats() {
+        UsageStatsManager usm = (UsageStatsManager) requireContext()
+                .getSystemService(Context.USAGE_STATS_SERVICE);
 
-        // Get today's start time (midnight)
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
-        long dayStartTime = calendar.getTimeInMillis();
 
-        for (UsageStats usageStats : stats) {
-            String packageName = usageStats.getPackageName();
+        long startTime = calendar.getTimeInMillis();
+        long endTime = System.currentTimeMillis();
 
-            // Calculate usage time only for today
-            long lastTimeUsed = usageStats.getLastTimeUsed();
-            long timeInForeground = 0;
+        UsageEvents events = usm.queryEvents(startTime, endTime);
 
-            if (lastTimeUsed >= dayStartTime) {
-                // For Android 10 (API 29) and above
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    timeInForeground = usageStats.getTotalTimeVisible();
-                } else {
-                    timeInForeground = usageStats.getTotalTimeInForeground();
-                }
+        processUsageEvents(events);
+    }
+
+    private void processUsageEvents(UsageEvents events) {
+        Map<String, Long> appUsageMap = new HashMap<>();
+        Map<String, Long> appStartTime = new HashMap<>();
+
+        long totalTime = 0;
+
+        UsageEvents.Event event = new UsageEvents.Event();
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event);
+
+            String packageName = event.getPackageName();
+
+            if (!isUserApp(packageName)) continue;
+
+            if (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) {
+                appStartTime.put(packageName, event.getTimeStamp());
             }
+            else if (event.getEventType() == UsageEvents.Event.ACTIVITY_PAUSED) {
+                Long start = appStartTime.get(packageName);
 
-            // Skip if no usage time today
-            if (timeInForeground <= 0) {
-                continue;
-            }
+                if (start != null) {
+                    long duration = event.getTimeStamp() - start;
 
-            // Check if it's a user app (non-system app)
-            if (isUserApp(packageName)) {
-                try {
-                    ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
-                    String appName = packageManager.getApplicationLabel(appInfo).toString();
+                    appUsageMap.put(packageName,
+                            appUsageMap.getOrDefault(packageName, 0L) + duration);
 
-                    // Update app usage map
-                    AppUsageInfo appUsageInfo = appUsageMap.computeIfAbsent(packageName,
-                            k -> {
-                                AppUsageInfo info = new AppUsageInfo(appName, 0);
-                                info.setPackageName(packageName);
-                                return info;
-                            });
-                    appUsageInfo.addUsageTime(timeInForeground);
-
-                    // Update recent apps map
-                    recentAppsMap.put(packageName, new RecentAppInfo(
-                            packageName,
-                            appName,
-                            timeInForeground,
-                            packageManager.getApplicationIcon(appInfo)
-                    ));
-
-                    totalUsageTime += timeInForeground;
-                } catch (PackageManager.NameNotFoundException e) {
-                    Log.e(TAG, "Error getting app info for " + packageName, e);
+                    totalTime += duration;
+                    appStartTime.remove(packageName);
                 }
             }
         }
 
-        // Update UI on main thread
-        long finalTotalUsageTime = totalUsageTime;
+        long now = System.currentTimeMillis();
+        for(String pkg : appStartTime.keySet()) {
+            long duration = now - appStartTime.get(pkg);
+            appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + duration);
+            totalTime += duration;
+        }
+
+        buildFinalLists(appUsageMap, totalTime);
+    }
+
+    private void buildFinalLists(Map<String, Long> appUsageMap, long totalTime) {
+        List<AppUsageInfo> appList = new ArrayList<>();
+
+        for (Map.Entry<String, Long> entry : appUsageMap.entrySet()) {
+            try {
+                ApplicationInfo appInfo = packageManager.getApplicationInfo(entry.getKey(), 0 );
+                String appName = packageManager.getApplicationLabel(appInfo).toString();
+
+                appList.add(new AppUsageInfo(
+                        appName,
+                        entry.getValue(),
+                        entry.getKey()   // THIS is the package name
+                ));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        Collections.sort(appList, (a,b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
+
         requireActivity().runOnUiThread(() -> {
-            updateUIWithUsageStats(appUsageMap.values(), recentAppsMap.values(), finalTotalUsageTime);
+            totalScreenTime.setText(formatTime(totalTime));
+
+            appUsageList.clear();
+            appUsageList.addAll(appList);
+            appUsageAdapter.notifyDataSetChanged();
+
+            recentAppsAdapter.updateData(convertToRecent(appList));
         });
+    }
+
+    private List<RecentAppInfo> convertToRecent(List<AppUsageInfo> appList) {
+        List<RecentAppInfo> list = new ArrayList<>();
+
+        for (AppUsageInfo app : appList) {
+            try {
+                ApplicationInfo appInfo = packageManager.getApplicationInfo(app.getPackageName(), 0 );
+
+                list.add(new RecentAppInfo(
+                        app.getPackageName(),
+                        app.getAppName(),
+                        app.getUsageTime(),
+                        packageManager.getApplicationIcon(appInfo)
+                ));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return list;
     }
 
     private void scheduleDailyReset() {
@@ -274,32 +283,6 @@ public class StatsFragment extends Fragment {
             alarmManager.setRepeating(AlarmManager.RTC, calendar.getTimeInMillis(),
                     AlarmManager.INTERVAL_DAY, pendingIntent);
         }
-    }
-
-    private void updateUIWithUsageStats(Collection<AppUsageInfo> appUsage,
-                                        Collection<RecentAppInfo> recentApps,
-                                        long totalTime) {
-        totalScreenTime.setText(formatTime(totalTime));
-
-        List<AppUsageInfo> sortedAppUsage = new ArrayList<>(appUsage);
-        Collections.sort(sortedAppUsage, (a, b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
-
-        List<RecentAppInfo> sortedRecentApps = new ArrayList<>(recentApps);
-        Collections.sort(sortedRecentApps, (a, b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
-
-        // Clear the current list and add all sorted items
-        appUsageList.clear();
-        if (sortedAppUsage.size() > MAX_APPS_IN_PIE_CHART) {
-            appUsageList.addAll(sortedAppUsage.subList(0, MAX_APPS_IN_PIE_CHART));
-        } else {
-            appUsageList.addAll(sortedAppUsage);
-        }
-        appUsageAdapter.notifyDataSetChanged();
-
-        // Update recent apps with the full list
-        recentAppsList.clear();
-        recentAppsList.addAll(sortedRecentApps);
-        recentAppsAdapter.updateData(sortedRecentApps);
     }
 
     private String formatTime(long millis) {
