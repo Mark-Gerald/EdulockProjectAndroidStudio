@@ -100,7 +100,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:padding="5dp">
+                        android:padding="2dp">
 
                         <ImageView
                             android:layout_width="20dp"

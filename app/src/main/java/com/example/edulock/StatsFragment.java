@@ -175,6 +175,7 @@ public class StatsFragment extends Fragment {
     private void processUsageEvents(UsageEvents events) {
         Map<String, Long> appUsageMap = new HashMap<>();
         Map<String, Long> appStartTime = new HashMap<>();
+        Map<String, Long> lastUsedMap = new HashMap<>();
 
         long totalTime = 0;
 
@@ -189,6 +190,8 @@ public class StatsFragment extends Fragment {
 
             if (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) {
                 appStartTime.put(packageName, event.getTimeStamp());
+
+                lastUsedMap.put(packageName, event.getTimeStamp());
             }
             else if (event.getEventType() == UsageEvents.Event.ACTIVITY_PAUSED) {
                 Long start = appStartTime.get(packageName);
@@ -212,10 +215,10 @@ public class StatsFragment extends Fragment {
             totalTime += duration;
         }
 
-        buildFinalLists(appUsageMap, totalTime);
+        buildFinalLists(appUsageMap, lastUsedMap, totalTime);
     }
 
-    private void buildFinalLists(Map<String, Long> appUsageMap, long totalTime) {
+    private void buildFinalLists(Map<String, Long> appUsageMap, Map<String, Long> lastUsedMap, long totalTime) {
         List<AppUsageInfo> appList = new ArrayList<>();
 
         for (Map.Entry<String, Long> entry : appUsageMap.entrySet()) {
@@ -242,28 +245,33 @@ public class StatsFragment extends Fragment {
             appUsageList.addAll(appList);
             appUsageAdapter.notifyDataSetChanged();
 
-            recentAppsAdapter.updateData(convertToRecent(appList));
+            recentAppsAdapter.updateData(convertToRecent(lastUsedMap));
         });
     }
 
-    private List<RecentAppInfo> convertToRecent(List<AppUsageInfo> appList) {
-        List<RecentAppInfo> list = new ArrayList<>();
+    private List<RecentAppInfo> convertToRecent(Map<String, Long> lastUsedMap) {
+        List<RecentAppInfo> recentList = new ArrayList<>();
 
-        for (AppUsageInfo app : appList) {
+        for (Map.Entry<String, Long> entry : lastUsedMap.entrySet()) {
             try {
-                ApplicationInfo appInfo = packageManager.getApplicationInfo(app.getPackageName(), 0 );
+                ApplicationInfo appInfo = packageManager.getApplicationInfo(entry.getKey(), 0);
+                String appName = packageManager.getApplicationLabel(appInfo).toString();
 
-                list.add(new RecentAppInfo(
-                        app.getPackageName(),
-                        app.getAppName(),
-                        app.getUsageTime(),
+                recentList.add(new RecentAppInfo(
+                        entry.getKey(),
+                        appName,
+                        entry.getValue(), // 🔥 THIS IS LAST USED TIME
                         packageManager.getApplicationIcon(appInfo)
                 ));
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        return list;
+        Collections.sort(recentList, (a, b) ->
+                Long.compare(b.getUsageTime(), a.getUsageTime())
+                );
+        return recentList;
     }
 
     private void scheduleDailyReset() {
@@ -290,5 +298,15 @@ public class StatsFragment extends Fragment {
         long hours = minutes / 60;
         minutes = minutes % 60;
         return hours + "h " + minutes + "m";
+    }
+
+    private String formatLastUsed(long time) {
+        long diff = System.currentTimeMillis() - time;
+
+        long minutes = diff / 60000;
+        long hours = minutes / 60;
+
+        if (hours > 0) return hours + "h ago";
+        else return minutes + "m ago";
     }
 }

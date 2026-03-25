@@ -6,7 +6,6 @@ public class AppUsageInfo {
     private long usageTime;
     private int color;
 
-    // ✅ FIXED CONSTRUCTOR (3 parameters)
     public AppUsageInfo(String appName, long usageTime, String packageName) {
         this.appName = appName;
         this.usageTime = usageTime;
