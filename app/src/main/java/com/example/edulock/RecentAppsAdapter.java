@@ -9,6 +9,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import android.view.View;
@@ -49,23 +50,17 @@ public class RecentAppsAdapter extends RecyclerView.Adapter<RecentAppsAdapter.Vi
         holder.usageTime.setText(formatLastUsed(app.getUsageTime()));
 
         holder.itemView.setAlpha(1.0f);
-        holder.itemView.setTranslationX(0f);
-        holder.itemView.setScaleX(1.0f);
-        holder.itemView.setScaleY(1.0f);
+        holder.itemView.setBackgroundColor(0x00000000);
 
         if(diff < 5000) {
+            holder.activeDot.setVisibility(View.VISIBLE);
             holder.itemView.setAlpha(1.0f);
             holder.itemView.setBackgroundColor(0x1A00FF00);
         } else {
             holder.itemView.setAlpha(0.85f);
             holder.itemView.setBackgroundColor(0x00000000);
+            holder.activeDot.setVisibility(View.GONE);
         }
-
-        holder.itemView.animate()
-                .scaleX(diff < 5000 ? 1.05f : 1.0f)
-                .scaleY(diff < 5000 ? 1.05f : 1.0f)
-                .setDuration(200)
-                .start();
     }
 
     @Override
@@ -119,21 +114,33 @@ public class RecentAppsAdapter extends RecyclerView.Adapter<RecentAppsAdapter.Vi
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
+
+                Collections.sort(recentAppsList, (a, b) ->
+                    Long.compare(b.getUsageTime(), a.getUsageTime())
+                );
+
+                filteredList.clear();
+                filteredList.addAll(recentAppsList);
+
                 notifyDataSetChanged();
-                handler.postDelayed(this, 60000);
+
+                handler.postDelayed(this,1000);
             }
-        }, 60000);
+        },  1000);
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIcon;
         TextView appName, usageTime;
+        View activeDot;
+
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             appIcon = itemView.findViewById(R.id.appIcon);
             appName = itemView.findViewById(R.id.appName);
             usageTime = itemView.findViewById(R.id.usageTime);
+            activeDot = itemView.findViewById(R.id.activeDot);
         }
     }
 }
