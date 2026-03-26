@@ -117,6 +117,12 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".service.UsageMonitorService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <receiver android:name=".service.AppMonitoringService$ServiceRestartReceiver"
             android:exported="false">
             <intent-filter>
@@ -141,6 +147,10 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".receiver.DailySummaryReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".receiver.BootReceiver"

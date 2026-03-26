@@ -18,6 +18,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.bumptech.glide.Glide;
+import com.example.edulock.service.UsageMonitorService;
 import com.example.edulock.ui.about.AboutUsFragment;
 import com.example.edulock.ui.contact.ContactUsFragment;
 import com.example.edulock.ui.control.ControlFragment;
@@ -58,6 +59,7 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_statistics_usage_data);
+        startService(new Intent(this, UsageMonitorService.class));
 
         // Initialize Firebase Auth first
         FirebaseAuth auth = FirebaseAuth.getInstance();
