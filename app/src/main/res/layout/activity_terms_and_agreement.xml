@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark"
-    tools:context=".termsAndAgreement">
+    tools:context=".ui.acitvity.termsAndAgreement">
 
    <TextView
        android:id="@+id/tvTitle"

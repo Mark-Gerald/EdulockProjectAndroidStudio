@@ -22,7 +22,7 @@
         tools:ignore="ProtectedPermissions" />
 
     <application
-        android:name=".EduLockApplication"
+        android:name=".core.EduLockApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -38,31 +38,31 @@
         android:preserveLegacyExternalStorage="true"
         tools:targetApi="31">
         <activity
-            android:name=".TimeLimitActivity"
+            android:name=".ui.acitvity.TimeLimitActivity"
             android:exported="false" />
         <activity
-            android:name=".statistics_usage_data"
+            android:name=".ui.acitvity.statistics_usage_data"
             android:exported="false"
             android:theme="@style/Theme.EduLock.NoActionBar" />
         <activity
-            android:name=".login_register"
+            android:name=".ui.acitvity.login_register"
             android:exported="true"
             android:windowSoftInputMode="adjustResize"/>
         <activity
-            android:name=".register_signup"
+            android:name=".ui.acitvity.register_signup"
             android:windowSoftInputMode="adjustResize"
             android:exported="false" />
         <activity
-            android:name=".all_done_activity"
+            android:name=".ui.acitvity.all_done_activity"
             android:exported="false" />
         <activity
-            android:name=".settingsGrantPermission"
+            android:name=".ui.acitvity.settingsGrantPermission"
             android:exported="false" />
         <activity
-            android:name=".termsAndAgreement"
+            android:name=".ui.acitvity.termsAndAgreement"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.acitvity.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -72,7 +72,7 @@
         </activity>
 
         <activity
-            android:name=".OverlayBlockedActivity"
+            android:name=".ui.acitvity.OverlayBlockedActivity"
             android:theme="@style/Theme.AppCompat.Dialog"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
@@ -86,7 +86,7 @@
         </activity>
 
         <service
-            android:name=".BlockOverlayService"
+            android:name=".service.BlockOverlayService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"
@@ -103,7 +103,7 @@
         </service>
 
         <service
-            android:name=".AppMonitoringService"
+            android:name=".service.AppMonitoringService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"
@@ -117,7 +117,7 @@
             </intent-filter>
         </service>
 
-        <receiver android:name=".AppMonitoringService$ServiceRestartReceiver"
+        <receiver android:name=".service.AppMonitoringService$ServiceRestartReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -126,7 +126,7 @@
         </receiver>
 
         <receiver
-            android:name=".ServiceWatcherReceiver"
+            android:name=".receiver.ServiceWatcherReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.example.edulock.CHECK_SERVICE" />
@@ -134,7 +134,7 @@
         </receiver>
 
         <receiver
-            android:name=".UsageStatsResetReceiver"
+            android:name=".receiver.UsageStatsResetReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.example.edulock.RESET_STATS" />
@@ -143,7 +143,7 @@
         </receiver>
 
         <receiver
-            android:name=".BootReceiver"
+            android:name=".receiver.BootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -153,7 +153,7 @@
         </receiver>
 
         <service
-            android:name=".AppBlockerAccessibilityService"
+            android:name=".service.AppBlockerAccessibilityService"
             android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">

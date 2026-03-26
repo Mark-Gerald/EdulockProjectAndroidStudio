@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_permission_gradient"
-    tools:context=".all_done_activity">
+    tools:context=".ui.acitvity.all_done_activity">
 
     <ImageView
         android:id="@+id/allDone"
