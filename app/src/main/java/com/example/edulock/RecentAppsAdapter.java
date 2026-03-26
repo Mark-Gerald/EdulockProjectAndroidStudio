@@ -46,21 +46,7 @@ public class RecentAppsAdapter extends RecyclerView.Adapter<RecentAppsAdapter.Vi
         holder.appIcon.setImageDrawable(app.getAppIcon());
         holder.appName.setText(app.getAppName());
 
-        long diff = System.currentTimeMillis() - app.getUsageTime();
         holder.usageTime.setText(formatLastUsed(app.getUsageTime()));
-
-        holder.itemView.setAlpha(1.0f);
-        holder.itemView.setBackgroundColor(0x00000000);
-
-        if(diff < 5000) {
-            holder.activeDot.setVisibility(View.VISIBLE);
-            holder.itemView.setAlpha(1.0f);
-            holder.itemView.setBackgroundColor(0x1A00FF00);
-        } else {
-            holder.itemView.setAlpha(0.85f);
-            holder.itemView.setBackgroundColor(0x00000000);
-            holder.activeDot.setVisibility(View.GONE);
-        }
     }
 
     @Override
@@ -132,7 +118,6 @@ public class RecentAppsAdapter extends RecyclerView.Adapter<RecentAppsAdapter.Vi
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIcon;
         TextView appName, usageTime;
-        View activeDot;
 
 
         ViewHolder(@NonNull View itemView) {
@@ -140,7 +125,6 @@ public class RecentAppsAdapter extends RecyclerView.Adapter<RecentAppsAdapter.Vi
             appIcon = itemView.findViewById(R.id.appIcon);
             appName = itemView.findViewById(R.id.appName);
             usageTime = itemView.findViewById(R.id.usageTime);
-            activeDot = itemView.findViewById(R.id.activeDot);
         }
     }
 }
