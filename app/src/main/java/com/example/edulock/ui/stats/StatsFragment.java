@@ -219,11 +219,14 @@ public class StatsFragment extends Fragment {
                 ApplicationInfo appInfo = packageManager.getApplicationInfo(entry.getKey(), 0 );
                 String appName = packageManager.getApplicationLabel(appInfo).toString();
 
+                long usageTime = entry.getValue();
+
+                if (usageTime < 60000) continue;
+
                 appList.add(new AppUsageInfo(
-                        appName,
-                        entry.getValue(),
-                        entry.getKey()   // THIS is the package name
+                    appName, usageTime, entry.getKey()
                 ));
+
             } catch (Exception e) {
                 Log.e(TAG, "Error processing app usage", e);
             }
@@ -270,8 +273,8 @@ public class StatsFragment extends Fragment {
     private void scheduleDailyReset() {
         Calendar calendar = Calendar.getInstance();
         calendar.add(Calendar.DAY_OF_YEAR, 1);
-        calendar.set(Calendar.HOUR_OF_DAY, 23);
-        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.HOUR_OF_DAY,0);
+        calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
 
         AlarmManager alarmManager = (AlarmManager) requireContext().getSystemService(Context.ALARM_SERVICE);

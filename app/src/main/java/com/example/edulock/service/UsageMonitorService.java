@@ -25,12 +25,10 @@ import java.util.Map;
 public class UsageMonitorService extends Service {
      final Handler handler = new Handler();
      final private Map<String, Integer> notifiedHours = new HashMap<>();
+     private int lastResetDay = -1;
 
     @Override
     public void onCreate() {
-
-        sendNotification("TEST_APP", 1);
-
         Notification notification = new NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
                 .setContentTitle("EduLock Running")
                 .setContentText("Monitoring app usage...")
@@ -60,14 +58,19 @@ public class UsageMonitorService extends Service {
 
         UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
 
-        long end = System.currentTimeMillis();
-
         Calendar cal = Calendar.getInstance();
+        int currentDay = cal.get(Calendar.DAY_OF_YEAR);
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
 
+        if(lastResetDay != currentDay) {
+            notifiedHours.clear();
+            lastResetDay = currentDay;
+        }
+
         long start = cal.getTimeInMillis();
+        long end = System.currentTimeMillis();
 
         List<UsageStats> stats = usm.queryUsageStats(
                 UsageStatsManager.INTERVAL_DAILY, start, end
