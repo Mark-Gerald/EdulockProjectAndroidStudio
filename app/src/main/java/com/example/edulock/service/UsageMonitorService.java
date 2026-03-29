@@ -7,6 +7,8 @@ import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.IBinder;
 
@@ -21,12 +23,24 @@ import java.util.List;
 import java.util.Map;
 
 public class UsageMonitorService extends Service {
-    private Handler handler = new Handler();
-    private Map<String, Integer> notifiedHours = new HashMap<>();
+     final Handler handler = new Handler();
+     final private Map<String, Integer> notifiedHours = new HashMap<>();
 
     @Override
     public void onCreate() {
+
+        sendNotification("TEST_APP", 1);
+
+        Notification notification = new NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
+                .setContentTitle("EduLock Running")
+                .setContentText("Monitoring app usage...")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .build();
+
+        startForeground(1, notification);
+
         super.onCreate();
+        android.util.Log.d("UsageService", "Service started");
         NotificationHelper.createChannel(this);
         startMonitoring();
     }
@@ -42,6 +56,8 @@ public class UsageMonitorService extends Service {
     }
 
     private void checkUsage() {
+        android.util.Log.d("UsageCheck", "Checking usage...");
+
         UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
 
         long end = System.currentTimeMillis();
@@ -72,14 +88,27 @@ public class UsageMonitorService extends Service {
                     sendNotification(pkg, hours);
                 }
             }
+            android.util.Log.d("UsageCheck", usage.getPackageName() + " time: " + usage.getTotalTimeInForeground());
+        }
+    }
+
+    private String getAppName(String packageName) {
+        PackageManager pm = getPackageManager();
+        try {
+            ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
+            return pm.getApplicationLabel(appInfo).toString();
+        } catch (PackageManager.NameNotFoundException e) {
+            return packageName;
         }
     }
 
     private void sendNotification(String packageName, int hours) {
+        String appName = getAppName(packageName);
+
         Notification notification = new NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_warning)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Take a Break!")
-                .setContentText("You've used " + packageName + " for " + hours + " hour(s)")
+                .setContentText("You've used " + appName + " for " + hours + " hour(s)")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build();

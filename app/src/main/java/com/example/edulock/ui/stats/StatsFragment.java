@@ -39,14 +39,13 @@ import java.util.Map;
 
 public class StatsFragment extends Fragment {
     private static final String TAG = "StatsFragment";
-    private static final int MAX_APPS_IN_PIE_CHART = 5;
 
     private RecyclerView appUsageRecyclerView;
     private RecyclerView recentAppsRecyclerView;
     private EditText searchApps;
     private TextView totalScreenTime;
-    private List<AppUsageInfo> appUsageList = new ArrayList<>();
-    private List<RecentAppInfo> recentAppsList = new ArrayList<>();
+    final private List<AppUsageInfo> appUsageList = new ArrayList<>();
+    final private List<RecentAppInfo> recentAppsList = new ArrayList<>();
     private AppUsageAdapter appUsageAdapter;
     private RecentAppsAdapter recentAppsAdapter;
     private PackageManager packageManager;
@@ -59,6 +58,7 @@ public class StatsFragment extends Fragment {
         initializeViews(view);
         setupAdapters();
         setupSearchListener();
+        scheduleDailyReset();
 
         if (checkUsageStatsPermission()) {
             loadAllUsageStats();
@@ -125,23 +125,6 @@ public class StatsFragment extends Fragment {
                 "Please grant usage access permission for app usage statistics",
                 Toast.LENGTH_LONG).show();
         startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
-    }
-
-    private boolean isUserInstalledApp(String packageName) {
-        try {
-            ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
-            boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-            Intent intent = packageManager.getLaunchIntentForPackage(packageName);
-            boolean hasLaunchIntent = intent != null;
-
-            Log.d("AppFilter", "Package: " + packageName +
-                    " isSystemApp: " + isSystemApp +
-                    " hasLaunchIntent: " + hasLaunchIntent);
-
-            return !isSystemApp && hasLaunchIntent;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
     }
 
     private boolean isUserApp(String packageName) {
@@ -212,10 +195,17 @@ public class StatsFragment extends Fragment {
         }
 
         long now = System.currentTimeMillis();
-        for(String pkg : appStartTime.keySet()) {
-            long duration = now - appStartTime.get(pkg);
-            appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + duration);
-            totalTime += duration;
+        for (String pkg : appStartTime.keySet()) {
+            Long start = appStartTime.get(pkg);
+
+            if (start != null) {
+                long duration = System.currentTimeMillis() - start;
+
+                appUsageMap.put(pkg,
+                        appUsageMap.getOrDefault(pkg, 0L) + duration);
+
+                totalTime += duration;
+            }
         }
 
         buildFinalLists(appUsageMap, lastUsedMap, totalTime);
@@ -235,11 +225,11 @@ public class StatsFragment extends Fragment {
                         entry.getKey()   // THIS is the package name
                 ));
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error processing app usage", e);
             }
         }
 
-        Collections.sort(appList, (a,b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
+        appList.sort((a,b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
 
         requireActivity().runOnUiThread(() -> {
             totalScreenTime.setText(formatTime(totalTime));
@@ -268,7 +258,7 @@ public class StatsFragment extends Fragment {
                 ));
 
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error processing app usage", e);
             }
         }
         Collections.sort(recentList, (a, b) ->
@@ -301,15 +291,5 @@ public class StatsFragment extends Fragment {
         long hours = minutes / 60;
         minutes = minutes % 60;
         return hours + "h " + minutes + "m";
-    }
-
-    private String formatLastUsed(long time) {
-        long diff = System.currentTimeMillis() - time;
-
-        long minutes = diff / 60000;
-        long hours = minutes / 60;
-
-        if (hours > 0) return hours + "h ago";
-        else return minutes + "m ago";
     }
 }
