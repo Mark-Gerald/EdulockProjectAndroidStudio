@@ -37,6 +37,8 @@
         android:requestLegacyExternalStorage="true"
         android:preserveLegacyExternalStorage="true"
         tools:targetApi="31">
+
+        <!-- ACTIVITIES -->
         <activity
             android:name=".ui.acitvity.TimeLimitActivity"
             android:exported="false" />
@@ -66,7 +68,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -82,9 +83,9 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustNothing">
-        </activity>
+            android:windowSoftInputMode="adjustNothing" />
 
+        <!-- SERVICES FOR MONITORING AND BLOCKING -->
         <service
             android:name=".service.BlockOverlayService"
             android:enabled="true"
@@ -117,51 +118,15 @@
             </intent-filter>
         </service>
 
+        <!-- USAGE MONITOR SERVICE - Sends notifications at 1h, 2h, 3h, etc -->
         <service
             android:name=".service.UsageMonitorService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
 
-        <receiver android:name=".service.AppMonitoringService$ServiceRestartReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="com.example.edulock.RESTART_SERVICE" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".receiver.ServiceWatcherReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.example.edulock.CHECK_SERVICE" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".receiver.UsageStatsResetReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.example.edulock.RESET_STATS" />
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".receiver.DailySummaryReceiver"
-            android:exported="false" />
-
-        <receiver
-            android:name=".receiver.BootReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </receiver>
-
+        <!-- ACCESSIBILITY SERVICE - For app blocking -->
         <service
             android:name=".service.AppBlockerAccessibilityService"
             android:label="@string/accessibility_service_label"
@@ -174,6 +139,59 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!-- BROADCAST RECEIVERS -->
+
+        <!-- Restart service when app monitoring crashes -->
+        <receiver android:name=".service.AppMonitoringService$ServiceRestartReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.example.edulock.RESTART_SERVICE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Watch if service stops -->
+        <receiver
+            android:name=".receiver.ServiceWatcherReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.edulock.CHECK_SERVICE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Reset usage stats at midnight -->
+        <receiver
+            android:name=".receiver.UsageStatsResetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.edulock.RESET_STATS" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- DAILY SUMMARY - Sends notification at midnight with total screen time -->
+        <receiver
+            android:name=".receiver.DailySummaryReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.example.edulock.DAILY_SUMMARY" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Boot receiver - Restarts UsageMonitorService when phone restarts -->
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

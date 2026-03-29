@@ -1,127 +1,234 @@
 package com.example.edulock.service;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
-import android.app.usage.UsageStats;
-import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
 import com.example.edulock.R;
+import com.example.edulock.receiver.DailySummaryReceiver;
 import com.example.edulock.utils.NotificationHelper;
+import com.example.edulock.utils.UsageTimeCalculator;
 
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+/**
+ * USAGE MONITORING SERVICE
+ *
+ * This service:
+ * 1. Runs in the background continuously (foreground service = survives app kill)
+ * 2. Checks app usage every 60 seconds
+ * 3. Sends notifications when usage reaches 1h, 2h, 3h, 4h, 5h, etc.
+ * 4. Each notification only shows ONCE per day
+ * 5. Schedules daily summary at midnight
+ */
 public class UsageMonitorService extends Service {
-     final Handler handler = new Handler();
-     final private Map<String, Integer> notifiedHours = new HashMap<>();
-     private int lastResetDay = -1;
+    private static final String TAG = "UsageMonitorService";
+    private static final int FOREGROUND_NOTIFICATION_ID = 1001;
+    private static final int CHECK_INTERVAL_SECONDS = 60; // Check every 60 seconds
+
+    private Handler handler = new Handler();
+
+    // Track which hours we've already notified about
+    // Key = package name, Value = hours notified
+    private Map<String, Integer> notifiedHours = new HashMap<>();
+
+    // Track what day we're on (to reset notifications at midnight)
+    private int lastResetDay = -1;
 
     @Override
     public void onCreate() {
-        Notification notification = new NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
-                .setContentTitle("EduLock Running")
-                .setContentText("Monitoring app usage...")
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .build();
-
-        startForeground(1, notification);
-
         super.onCreate();
-        android.util.Log.d("UsageService", "Service started");
+        Log.d(TAG, "UsageMonitorService created");
+
         NotificationHelper.createChannel(this);
+
+        // Start as FOREGROUND SERVICE - this keeps it running even if app is killed
+        startForeground(FOREGROUND_NOTIFICATION_ID, createForegroundNotification());
+
+        // Schedule midnight notification
+        scheduleMidnightSummary();
+
+        // Start checking usage
         startMonitoring();
     }
 
+    /**
+     * MAIN MONITORING LOOP
+     * Runs every 60 seconds to check if user has exceeded time limits
+     */
     private void startMonitoring() {
-        handler.postDelayed(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
-                checkUsage();
-                handler.postDelayed(this, 60000);
+                try {
+                    checkUsage();
+                } catch (Exception e) {
+                    Log.e(TAG, "Error checking usage", e);
+                }
+
+                // Schedule next check in 60 seconds
+                handler.postDelayed(this, CHECK_INTERVAL_SECONDS * 1000);
             }
-        }, 60000);
+        });
     }
 
+    /**
+     * CHECK USAGE - Main logic
+     *
+     * This method:
+     * 1. Gets today's app usage using our centralized calculator
+     * 2. For each app used >= 1 hour:
+     *    - Check if we've already notified for this hour
+     *    - If not, send notification and mark hour as notified
+     */
     private void checkUsage() {
-        android.util.Log.d("UsageCheck", "Checking usage...");
+        Log.d(TAG, "Checking app usage...");
 
-        UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
-
+        // Get current day (resets notifications at midnight)
         Calendar cal = Calendar.getInstance();
         int currentDay = cal.get(Calendar.DAY_OF_YEAR);
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
 
-        if(lastResetDay != currentDay) {
-            notifiedHours.clear();
+        if (lastResetDay != currentDay) {
+            notifiedHours.clear(); // Clear notification history at new day
             lastResetDay = currentDay;
+            Log.d(TAG, "New day detected - resetting notification history");
         }
 
-        long start = cal.getTimeInMillis();
-        long end = System.currentTimeMillis();
+        // Get all app usage times using our centralized calculator
+        Map<String, Long> appUsageMap = UsageTimeCalculator.getAppUsageToday(this);
 
-        List<UsageStats> stats = usm.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, start, end
-        );
+        // Check each app
+        for (Map.Entry<String, Long> entry : appUsageMap.entrySet()) {
+            String packageName = entry.getKey();
+            long usageMillis = entry.getValue();
 
-        for (UsageStats usage : stats) {
-            long time = usage.getTotalTimeInForeground();
+            // Convert to hours (integer)
+            int hours = (int) (usageMillis / (1000 * 60 * 60));
 
-            int hours = (int) (time / (1000 * 60 * 60));
-
+            // Only notify if >= 1 hour
             if (hours >= 1) {
-                String pkg = usage.getPackageName();
+                // Get last hour we notified about for this app
+                int lastNotifiedHour = notifiedHours.getOrDefault(packageName, 0);
 
-                int lastNotified = notifiedHours.getOrDefault(pkg, 0);
-
-                if (hours > lastNotified) {
-                    notifiedHours.put(pkg, hours);
-                    sendNotification(pkg, hours);
+                // If they've used MORE hours since last notification, send new one
+                if (hours > lastNotifiedHour) {
+                    notifiedHours.put(packageName, hours);
+                    sendUsageNotification(packageName, hours);
+                    Log.d(TAG, packageName + " exceeded " + hours + " hour(s)");
                 }
             }
-            android.util.Log.d("UsageCheck", usage.getPackageName() + " time: " + usage.getTotalTimeInForeground());
         }
     }
 
-    private String getAppName(String packageName) {
-        PackageManager pm = getPackageManager();
-        try {
-            ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
-            return pm.getApplicationLabel(appInfo).toString();
-        } catch (PackageManager.NameNotFoundException e) {
-            return packageName;
-        }
-    }
-
-    private void sendNotification(String packageName, int hours) {
+    /**
+     * SEND USAGE NOTIFICATION
+     *
+     * Displays: "You've used [AppName] for X hour(s)"
+     */
+    private void sendUsageNotification(String packageName, int hours) {
         String appName = getAppName(packageName);
 
-        Notification notification = new NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Take a Break!")
                 .setContentText("You've used " + appName + " for " + hours + " hour(s)")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true)
-                .build();
+                .setAutoCancel(true) // Allows user to dismiss
+                .setOnlyAlertOnce(true); // Only alert once per notification
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        manager.notify(packageName.hashCode(), notification);
+
+        // Use package name hash as notification ID so each app gets its own notification
+        manager.notify(packageName.hashCode(), builder.build());
+
+        Log.d(TAG, "Sent notification for " + appName);
+    }
+
+    /**
+     * SCHEDULE MIDNIGHT SUMMARY
+     *
+     * This sets up an AlarmManager to send a daily summary at midnight
+     */
+    private void scheduleMidnightSummary() {
+        Calendar calendar = Calendar.getInstance();
+        // Set to next midnight (00:00)
+        calendar.add(Calendar.DAY_OF_YEAR, 1);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, DailySummaryReceiver.class);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        if (alarmManager != null) {
+            // Set alarm to repeat every day
+            alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.getTimeInMillis(),
+                    pendingIntent
+            );
+            Log.d(TAG, "Scheduled daily summary for midnight");
+        }
+    }
+
+    /**
+     * GET APP NAME
+     * Converts package name (e.g., "com.example.game") to user-friendly name
+     */
+    private String getAppName(String packageName) {
+        try {
+            return getPackageManager()
+                    .getApplicationLabel(
+                            getPackageManager().getApplicationInfo(packageName, 0)
+                    ).toString();
+        } catch (Exception e) {
+            return packageName; // Fall back to package name if error
+        }
+    }
+
+    /**
+     * FOREGROUND NOTIFICATION
+     * Shows persistent notification that keeps service alive
+     */
+    private Notification createForegroundNotification() {
+        return new NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
+                .setContentTitle("EduLock Running")
+                .setContentText("Monitoring app usage...")
+                .setSmallIcon(R.drawable.ic_timer)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true) // Persistent - cannot be swiped away
+                .build();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand called");
+        return START_STICKY; // Restarts service if killed
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "Service destroyed");
+        handler.removeCallbacksAndMessages(null);
     }
 }

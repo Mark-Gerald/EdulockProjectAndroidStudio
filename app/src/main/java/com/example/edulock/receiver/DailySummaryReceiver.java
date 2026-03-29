@@ -1,59 +1,55 @@
 package com.example.edulock.receiver;
 
-import android.app.Notification;
 import android.app.NotificationManager;
-import android.app.usage.UsageStats;
-import android.app.usage.UsageStatsManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
 import com.example.edulock.R;
 import com.example.edulock.utils.NotificationHelper;
+import com.example.edulock.utils.UsageTimeCalculator;
 
-import java.util.Calendar;
-import java.util.*;
-
+/**
+ * DAILY SUMMARY RECEIVER
+ *
+ * Triggered by AlarmManager at midnight (00:00)
+ * Sends notification showing total screen time for the day
+ */
 public class DailySummaryReceiver extends BroadcastReceiver {
+    private static final String TAG = "DailySummaryReceiver";
+    private static final int SUMMARY_NOTIFICATION_ID = 9999;
 
+    @Override
     public void onReceive(Context context, Intent intent) {
+        Log.d(TAG, "Daily summary triggered at midnight");
 
-        UsageStatsManager usm = (UsageStatsManager)
-                context.getSystemService(Context.USAGE_STATS_SERVICE);
+        try {
+            // Get TOTAL screen time for entire day
+            long totalMillis = UsageTimeCalculator.getTotalScreenTimeToday(context);
 
-        long end = System.currentTimeMillis();
+            // Convert to hours and minutes
+            String formattedTime = UsageTimeCalculator.formatTime(totalMillis);
 
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
+            Log.d(TAG, "Total screen time today: " + formattedTime);
 
-        long start = cal.getTimeInMillis();
+            // Create and send notification
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_stats)
+                    .setContentTitle("Daily Screen Time Summary")
+                    .setContentText("Total Screen time of the day: " + formattedTime)
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setAutoCancel(true); // User can dismiss
 
-        List<UsageStats> stats = usm.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, start, end
-        );
+            NotificationManager manager =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        long total = 0;
-        for (UsageStats stat : stats) {
-            total += stat.getTotalTimeInForeground();
+            manager.notify(SUMMARY_NOTIFICATION_ID, builder.build());
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending daily summary", e);
         }
-
-        long hours = total / (1000 * 60 * 60);
-        long minutes = (total / (1000 * 60)) % 60;
-
-        Notification notification = new NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stats)
-                .setContentTitle("Daily Screen Time")
-                .setContentText("You used your phone for " + hours + "h " + minutes + "m today")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-                .build();
-
-        NotificationManager manager =
-                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        manager.notify(9999, notification);
     }
 }

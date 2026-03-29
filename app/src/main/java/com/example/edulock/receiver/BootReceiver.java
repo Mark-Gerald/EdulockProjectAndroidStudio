@@ -4,14 +4,26 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 
-import com.example.edulock.service.AppMonitoringService;
+import com.example.edulock.service.UsageMonitorService;
 
+/**
+ * BOOT RECEIVER
+ *
+ * Restarts the monitoring service when phone reboots
+ * This ensures notifications work even after phone restart
+ */
 public class BootReceiver extends BroadcastReceiver {
+    private static final String TAG = "BootReceiver";
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            Intent serviceIntent = new Intent(context, AppMonitoringService.class);
+            Log.d(TAG, "Phone rebooted - restarting UsageMonitorService");
+
+            Intent serviceIntent = new Intent(context, UsageMonitorService.class);
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent);
             } else {
