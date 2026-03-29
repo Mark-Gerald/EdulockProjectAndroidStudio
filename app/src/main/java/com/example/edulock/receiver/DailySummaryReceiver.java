@@ -16,7 +16,7 @@ import com.example.edulock.utils.UsageTimeCalculator;
  * DAILY SUMMARY RECEIVER
  *
  * Triggered by AlarmManager at midnight (00:00)
- * Sends notification showing total screen time for the day
+ * Sends notification showing YESTERDAY's total screen time (not today's which is 0h)
  */
 public class DailySummaryReceiver extends BroadcastReceiver {
     private static final String TAG = "DailySummaryReceiver";
@@ -27,13 +27,14 @@ public class DailySummaryReceiver extends BroadcastReceiver {
         Log.d(TAG, "Daily summary triggered at midnight");
 
         try {
-            // Get TOTAL screen time for entire day
-            long totalMillis = UsageTimeCalculator.getTotalScreenTimeToday(context);
+            // 🔥 KEY FIX: Get PREVIOUS day's data, not today's!
+            // (Today is 0h 0m because it just started)
+            long totalMillis = UsageTimeCalculator.getTotalScreenTimePreviousDay(context);
 
             // Convert to hours and minutes
             String formattedTime = UsageTimeCalculator.formatTime(totalMillis);
 
-            Log.d(TAG, "Total screen time today: " + formattedTime);
+            Log.d(TAG, "Total screen time YESTERDAY: " + formattedTime);
 
             // Create and send notification
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)

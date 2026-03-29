@@ -78,4 +78,48 @@ public class UsageTimeCalculator {
         minutes = minutes % 60;
         return hours + "h " + minutes + "m";
     }
+
+    /**
+     * Get app usage for the PREVIOUS day (for midnight summary notification)
+     *
+     * Called at midnight to show YESTERDAY's total, not today's (which is 0h 0m)
+     */
+    public static Map<String, Long> getAppUsagePreviousDay(Context context) {
+        UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
+
+        Calendar calendar = Calendar.getInstance();
+
+        // Go back 1 day
+        calendar.add(Calendar.DAY_OF_YEAR, -1);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        long startTime = calendar.getTimeInMillis();
+
+        // End time = today at 00:00 (midnight)
+        Calendar endCalendar = Calendar.getInstance();
+        endCalendar.set(Calendar.HOUR_OF_DAY, 0);
+        endCalendar.set(Calendar.MINUTE, 0);
+        endCalendar.set(Calendar.SECOND, 0);
+        endCalendar.set(Calendar.MILLISECOND, 0);
+
+        long endTime = endCalendar.getTimeInMillis();
+
+        UsageEvents events = usm.queryEvents(startTime, endTime);
+        return processEvents(events);
+    }
+
+    /**
+     * Get total screen time for the PREVIOUS day
+     */
+    public static long getTotalScreenTimePreviousDay(Context context) {
+        Map<String, Long> appUsage = getAppUsagePreviousDay(context);
+        long total = 0;
+        for (Long time : appUsage.values()) {
+            total += time;
+        }
+        return total;
+    }
 }
