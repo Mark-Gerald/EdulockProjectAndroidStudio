@@ -201,17 +201,39 @@ public class StatsFragment extends Fragment {
             if (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) {
                 String packageName = event.getPackageName();
 
-                // ✅ NEW FIX: Only include apps that are in our app usage list
-                // AND exclude EduLock itself (to avoid showing our own app)
-                if (appPackages.contains(packageName) && !packageName.equals(EDULOCK_PACKAGE)) {
+                // ✅ NEW FIX: Check three conditions:
+                // 1. App is in our app usage list (from dashboard)
+                // 2. NOT EduLock itself
+                // 3. NOT a system app
+                if (appPackages.contains(packageName)
+                        && !packageName.equals(EDULOCK_PACKAGE)
+                        && !isSystemApp(packageName)) {  // NEW: Filter system apps
+
                     lastUsedMap.put(packageName, event.getTimeStamp());
                     Log.d(TAG, "Tracked: " + packageName + " at " + event.getTimeStamp());
                 }
             }
         }
 
-        Log.d(TAG, "Found " + lastUsedMap.size() + " recent activities (excluding EduLock)");
+        Log.d(TAG, "Found " + lastUsedMap.size() + " recent activities (excluding EduLock and system apps)");
         return lastUsedMap;
+    }
+
+    /**
+     * CHECK IF APP IS SYSTEM APP - Determines if app is system-level
+     *
+     * NEW METHOD to check if an app is a system app
+     */
+    private boolean isSystemApp(String packageName) {
+        try {
+            ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+            // System apps have FLAG_SYSTEM set
+            boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            Log.d(TAG, packageName + " is system app: " + isSystemApp);
+            return isSystemApp;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
     }
 
     /**
