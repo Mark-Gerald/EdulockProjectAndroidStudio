@@ -48,6 +48,7 @@ import java.util.Map;
  */
 public class StatsFragment extends Fragment {
     private static final String TAG = "StatsFragment";
+    private static final String EDULOCK_PACKAGE = "com.example.edulock"; // EduLock's own package name
 
     private RecyclerView appUsageRecyclerView;
     private RecyclerView recentAppsRecyclerView;
@@ -141,14 +142,14 @@ public class StatsFragment extends Fragment {
      */
     private void loadAllUsageStats() {
         try {
-            // Use centralized calculator - SAME as notifications!
+            // 🔥 FIX: Use centralized calculator for app usage - SAME source as notifications!
             Map<String, Long> appUsageMap = UsageTimeCalculator.getAppUsageToday(requireContext());
 
             // Get total screen time
             long totalTime = UsageTimeCalculator.getTotalScreenTimeToday(requireContext());
 
-            // Get recent activities (last apps used)
-            Map<String, Long> lastUsedMap = getRecentActivities();
+            // 🔥 FIX: Get recent activity timestamps for apps in appUsageMap
+            Map<String, Long> lastUsedMap = getRecentActivityTimestamps(appUsageMap.keySet());
 
             // Process and display everything
             processAndDisplayUsage(appUsageMap, lastUsedMap, totalTime);
@@ -159,12 +160,20 @@ public class StatsFragment extends Fragment {
     }
 
     /**
-     * GET RECENT ACTIVITIES - Track which apps were used most recently
+     * GET RECENT ACTIVITY TIMESTAMPS - Find when each app was last used
      *
-     * This uses UsageEvents to find ACTIVITY_RESUMED events
-     * (when user opens an app) to determine which apps they used recently
+     * This tracks ACTIVITY_RESUMED events to find the most recent time each app was opened
+     * Only includes apps that appear in the provided app list
+     *
+     * @param appPackages List of app package names to track (from Screen Time dashboard)
+     * @return Map of package name -> last used timestamp
      */
-    private Map<String, Long> getRecentActivities() {
+    private Map<String, Long> getRecentActivityTimestamps(java.util.Set<String> appPackages) {
+        if (appPackages == null || appPackages.isEmpty()) {
+            Log.d(TAG, "No apps to track for recent activities");
+            return new HashMap<>();
+        }
+
         UsageStatsManager usm = (UsageStatsManager) requireContext()
                 .getSystemService(Context.USAGE_STATS_SERVICE);
 
@@ -179,7 +188,7 @@ public class StatsFragment extends Fragment {
 
         UsageEvents events = usm.queryEvents(startTime, endTime);
 
-        // Map to store: app package name -> last time it was used
+        // Map to store: app package name -> last time it was used (ACTIVITY_RESUMED)
         Map<String, Long> lastUsedMap = new HashMap<>();
 
         UsageEvents.Event event = new UsageEvents.Event();
@@ -192,13 +201,16 @@ public class StatsFragment extends Fragment {
             if (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) {
                 String packageName = event.getPackageName();
 
-                // Only track user apps, not system apps
-                if (isUserApp(packageName)) {
+                // ✅ NEW FIX: Only include apps that are in our app usage list
+                // AND exclude EduLock itself (to avoid showing our own app)
+                if (appPackages.contains(packageName) && !packageName.equals(EDULOCK_PACKAGE)) {
                     lastUsedMap.put(packageName, event.getTimeStamp());
+                    Log.d(TAG, "Tracked: " + packageName + " at " + event.getTimeStamp());
                 }
             }
         }
 
+        Log.d(TAG, "Found " + lastUsedMap.size() + " recent activities (excluding EduLock)");
         return lastUsedMap;
     }
 
@@ -220,11 +232,14 @@ public class StatsFragment extends Fragment {
 
     /**
      * PROCESS AND DISPLAY - Update UI with stats
+     *
+     * NOW: appUsageMap contains the same apps as Screen Time dashboard!
+     * lastUsedMap contains when each app was last opened
      */
     private void processAndDisplayUsage(Map<String, Long> appUsageMap, Map<String, Long> lastUsedMap, long totalTime) {
         List<AppUsageInfo> appList = new ArrayList<>();
 
-        // Process app usage list
+        // Process app usage list (SAME as Screen Time dashboard)
         for (Map.Entry<String, Long> entry : appUsageMap.entrySet()) {
             try {
                 ApplicationInfo appInfo = packageManager.getApplicationInfo(entry.getKey(), 0);
@@ -245,28 +260,41 @@ public class StatsFragment extends Fragment {
         // Sort by most used first
         appList.sort((a, b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
 
-        // Process recent activities list
+        // 🔥 FIX: Process recent activities list using SAME apps as dashboard
         List<RecentAppInfo> recentList = new ArrayList<>();
+
         for (Map.Entry<String, Long> entry : lastUsedMap.entrySet()) {
             try {
-                ApplicationInfo appInfo = packageManager.getApplicationInfo(entry.getKey(), 0);
+                String packageName = entry.getKey();
+                long lastUsedTimestamp = entry.getValue();
+
+                // Skip EduLock itself
+                if (packageName.equals(EDULOCK_PACKAGE)) {
+                    continue;
+                }
+
+                ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
                 String appName = packageManager.getApplicationLabel(appInfo).toString();
 
                 recentList.add(new RecentAppInfo(
-                        entry.getKey(),
+                        packageName,
                         appName,
-                        entry.getValue(), // Last used timestamp
+                        lastUsedTimestamp, // Timestamp when app was last opened
                         packageManager.getApplicationIcon(appInfo)
                 ));
+
+                Log.d(TAG, "Added to recent: " + appName + " (last used: " + lastUsedTimestamp + ")");
 
             } catch (Exception e) {
                 Log.e(TAG, "Error processing recent app", e);
             }
         }
 
-        // Sort by most recent first
+        // Sort by most recent first (highest timestamp = most recent)
         Collections.sort(recentList, (a, b) ->
                 Long.compare(b.getUsageTime(), a.getUsageTime()));
+
+        Log.d(TAG, "Recent activities: " + recentList.size() + " apps");
 
         // Update UI on main thread
         requireActivity().runOnUiThread(() -> {
@@ -280,7 +308,7 @@ public class StatsFragment extends Fragment {
             recentAppsList.addAll(recentList);
             recentAppsAdapter.notifyDataSetChanged();
 
-            Log.d(TAG, "Updated UI: " + appList.size() + " apps, " + recentList.size() + " recent");
+            Log.d(TAG, "Updated UI: " + appList.size() + " apps, " + recentList.size() + " recent (EduLock excluded)");
         });
     }
 
