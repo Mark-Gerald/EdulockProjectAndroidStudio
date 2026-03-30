@@ -41,4 +41,6 @@
     <string name="debugger">Debugger</string>
     <string name="research_teacher">Research Teacher</string>
     <string name="adviser">Adviser</string>
+
+    <string name="default_web_client_id">370284423822-abcdefghijklmnopqrstu.apps.googleusercontent.com</string>
 </resources>

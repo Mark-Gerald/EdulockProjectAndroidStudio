@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "370284423822",
+    "firebase_url": "https://edulock-register-firebase-default-rtdb.firebaseio.com",
     "project_id": "edulock-register-firebase",
     "storage_bucket": "edulock-register-firebase.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.example.edulock"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "370284423822-3damu4nf2vd17il1pnblq512cvagns38.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.edulock",
+            "certificate_hash": "566f871e8c3c961a50c689177a7009a5f41c767c"
+          }
+        },
+        {
+          "client_id": "370284423822-o9d2kcr8o2ebl2d6uprvfopvk9cig1tn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyB7JsjsTlX_lxElY5HJRgQ8wPdphHNJu3k"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "370284423822-o9d2kcr8o2ebl2d6uprvfopvk9cig1tn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
