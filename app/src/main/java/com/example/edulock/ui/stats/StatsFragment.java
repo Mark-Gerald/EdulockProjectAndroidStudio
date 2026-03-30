@@ -276,9 +276,6 @@ public class StatsFragment extends Fragment {
 
     /**
      * PROCESS AND DISPLAY - Update UI with stats
-     *
-     * NOW: appUsageMap contains the same apps as Screen Time dashboard!
-     * lastUsedMap contains when each app was last opened
      */
     private void processAndDisplayUsage(Map<String, Long> appUsageMap, Map<String, Long> lastUsedMap, long totalTime) {
         Log.d(TAG, "processAndDisplayUsage called");
@@ -355,24 +352,32 @@ public class StatsFragment extends Fragment {
             recentAppsList.addAll(recentList);
             recentAppsAdapter.notifyDataSetChanged();
 
-            // 🔥 NEW: Show/hide empty state message based on whether there are recent apps
+            // 🔥 FIXED: Properly show/hide elements based on whether there are recent apps
             if (recentList.isEmpty()) {
-                // No recent activities - show empty state message
+                Log.d(TAG, "No recent activities - showing empty state");
+
+                // Hide search and list
                 searchApps.setVisibility(View.GONE);
                 recentAppsRecyclerView.setVisibility(View.GONE);
+
+                // Show empty message
                 if (emptyStateMessage != null) {
                     emptyStateMessage.setVisibility(View.VISIBLE);
                     emptyStateMessage.setText("No Apps Currently in use.");
+                    Log.d(TAG, "Empty state message set to VISIBLE");
                 }
-                Log.d(TAG, "Showing empty state message");
             } else {
-                // Has recent activities - show search and list
+                Log.d(TAG, "Found " + recentList.size() + " recent activities - showing list");
+
+                // Show search and list
                 searchApps.setVisibility(View.VISIBLE);
                 recentAppsRecyclerView.setVisibility(View.VISIBLE);
+
+                // Hide empty message
                 if (emptyStateMessage != null) {
                     emptyStateMessage.setVisibility(View.GONE);
+                    Log.d(TAG, "Empty state message set to GONE");
                 }
-                Log.d(TAG, "Showing recent activities list");
             }
 
             Log.d(TAG, "Updated UI: " + appList.size() + " apps, " + recentList.size() + " recent (EduLock excluded)");
