@@ -90,21 +90,18 @@ public class StatsFragment extends Fragment {
         recentAppsRecyclerView = view.findViewById(R.id.recentAppsRecyclerView);
         searchApps = view.findViewById(R.id.searchApps);
         totalScreenTime = view.findViewById(R.id.totalScreenTime);
-        emptyStateMessage = view.findViewById(R.id.emptyStateMessage);  // 🔥 NEW
+        emptyStateMessage = view.findViewById(R.id.emptyStateMessage);
 
-        // 🔥 NEW: Initially hide empty state message
         if (emptyStateMessage != null) {
             emptyStateMessage.setVisibility(View.GONE);
         }
     }
 
     private void setupAdapters() {
-        // Setup app usage adapter with vertical scrolling
         appUsageAdapter = new AppUsageAdapter(appUsageList);
         appUsageRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         appUsageRecyclerView.setAdapter(appUsageAdapter);
 
-        // Setup recent apps adapter with vertical scrolling
         recentAppsAdapter = new RecentAppsAdapter(recentAppsList);
         recentAppsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recentAppsRecyclerView.setAdapter(recentAppsAdapter);

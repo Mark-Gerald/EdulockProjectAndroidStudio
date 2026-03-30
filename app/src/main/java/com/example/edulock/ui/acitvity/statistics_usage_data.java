@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.widget.ImageButton;
 import androidx.activity.EdgeToEdge;
@@ -76,41 +77,27 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
             }
         }
 
+        Log.d("statistics_usage_data", "Starting UsageMonitorService");
         Intent serviceIntent = new Intent(this, UsageMonitorService.class);
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
         }
+        Log.d("statistics_usage_data", "UsageMonitorService started");
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(new Intent(this, UsageMonitorService.class));
-        } else {
-            startService(new Intent(this, UsageMonitorService.class));
-        }
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
-        }
-
-        // Initialize Firebase Auth first
         FirebaseAuth auth = FirebaseAuth.getInstance();
 
-        // Initialize toolbar
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // Initialize and setup profile button
         ImageButton profileButton = findViewById(R.id.profile_button);
         profileButton.setOnClickListener(v -> showProfileDialog());
 
-        // Now load profile image after Firebase and view initialization
         if (auth.getCurrentUser() != null) {
             loadProfileImage();
         }
 
-        // Rest of your onCreate code remains the same
         drawerLayout = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open,
                 R.string.navigation_drawer_close);
