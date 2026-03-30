@@ -48,7 +48,7 @@ import java.util.Map;
  */
 public class StatsFragment extends Fragment {
     private static final String TAG = "StatsFragment";
-    private static final String EDULOCK_PACKAGE = "com.example.edulock"; // EduLock's own package name
+    private static final String EDULOCK_PACKAGE = "com.example.edulock";
 
     private RecyclerView appUsageRecyclerView;
     private RecyclerView recentAppsRecyclerView;
@@ -61,6 +61,9 @@ public class StatsFragment extends Fragment {
     private AppUsageAdapter appUsageAdapter;
     private RecentAppsAdapter recentAppsAdapter;
     private PackageManager packageManager;
+
+    // 🔥 NEW: Prevent duplicate loads
+    private boolean isLoadingStats = false;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -142,20 +145,35 @@ public class StatsFragment extends Fragment {
      */
     private void loadAllUsageStats() {
         try {
-            // 🔥 FIX: Use centralized calculator for app usage - SAME source as notifications!
+            // 🔥 FIX: Prevent duplicate loads at the same time
+            if (isLoadingStats) {
+                Log.d(TAG, "Already loading stats, skipping duplicate call");
+                return;
+            }
+            isLoadingStats = true;
+
+            Log.d(TAG, "Starting to load all usage stats...");
+
+            // Use centralized calculator - SAME source as notifications!
             Map<String, Long> appUsageMap = UsageTimeCalculator.getAppUsageToday(requireContext());
+            Log.d(TAG, "Got appUsageMap with " + appUsageMap.size() + " apps");
 
             // Get total screen time
             long totalTime = UsageTimeCalculator.getTotalScreenTimeToday(requireContext());
+            Log.d(TAG, "Total screen time: " + UsageTimeCalculator.formatTime(totalTime));
 
-            // 🔥 FIX: Get recent activity timestamps for apps in appUsageMap
+            // Get recent activity timestamps for apps in appUsageMap
             Map<String, Long> lastUsedMap = getRecentActivityTimestamps(appUsageMap.keySet());
+            Log.d(TAG, "Got lastUsedMap with " + lastUsedMap.size() + " apps");
 
             // Process and display everything
             processAndDisplayUsage(appUsageMap, lastUsedMap, totalTime);
 
+            isLoadingStats = false;
+
         } catch (Exception e) {
             Log.e(TAG, "Error loading usage stats", e);
+            isLoadingStats = false;
         }
     }
 
@@ -163,7 +181,7 @@ public class StatsFragment extends Fragment {
      * GET RECENT ACTIVITY TIMESTAMPS - Find when each app was last used
      *
      * This tracks ACTIVITY_RESUMED events to find the most recent time each app was opened
-     * Only includes apps that appear in the provided app list
+     * Only includes apps that appear in the provided app list (and NOT system apps)
      *
      * @param appPackages List of app package names to track (from Screen Time dashboard)
      * @return Map of package name -> last used timestamp
@@ -201,13 +219,13 @@ public class StatsFragment extends Fragment {
             if (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) {
                 String packageName = event.getPackageName();
 
-                // ✅ NEW FIX: Check three conditions:
+                // ✅ FIX: Three conditions:
                 // 1. App is in our app usage list (from dashboard)
                 // 2. NOT EduLock itself
                 // 3. NOT a system app
                 if (appPackages.contains(packageName)
                         && !packageName.equals(EDULOCK_PACKAGE)
-                        && !isSystemApp(packageName)) {  // NEW: Filter system apps
+                        && !isSystemApp(packageName)) {
 
                     lastUsedMap.put(packageName, event.getTimeStamp());
                     Log.d(TAG, "Tracked: " + packageName + " at " + event.getTimeStamp());
@@ -221,32 +239,13 @@ public class StatsFragment extends Fragment {
 
     /**
      * CHECK IF APP IS SYSTEM APP - Determines if app is system-level
-     *
-     * NEW METHOD to check if an app is a system app
      */
     private boolean isSystemApp(String packageName) {
         try {
             ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
             // System apps have FLAG_SYSTEM set
             boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-            Log.d(TAG, packageName + " is system app: " + isSystemApp);
             return isSystemApp;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
-    }
-
-    /**
-     * CHECK IF APP IS USER APP - Filters out system apps
-     */
-    private boolean isUserApp(String packageName) {
-        try {
-            ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
-            // Check if it's not a system app and has a launch intent
-            boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-            Intent launchIntent = packageManager.getLaunchIntentForPackage(packageName);
-
-            return !isSystemApp && launchIntent != null;
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
@@ -282,7 +281,7 @@ public class StatsFragment extends Fragment {
         // Sort by most used first
         appList.sort((a, b) -> Long.compare(b.getUsageTime(), a.getUsageTime()));
 
-        // 🔥 FIX: Process recent activities list using SAME apps as dashboard
+        // Process recent activities list using SAME apps as dashboard
         List<RecentAppInfo> recentList = new ArrayList<>();
 
         for (Map.Entry<String, Long> entry : lastUsedMap.entrySet()) {
@@ -290,7 +289,7 @@ public class StatsFragment extends Fragment {
                 String packageName = entry.getKey();
                 long lastUsedTimestamp = entry.getValue();
 
-                // Skip EduLock itself
+                // Skip EduLock itself (double check)
                 if (packageName.equals(EDULOCK_PACKAGE)) {
                     continue;
                 }
@@ -364,10 +363,12 @@ public class StatsFragment extends Fragment {
         Log.d(TAG, "Fragment resumed - refreshing stats");
 
         if (checkUsageStatsPermission()) {
-            // Add small delay to ensure system has time to record events
+            // 🔥 FIX: Add delay to prevent race condition with onCreateView()
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                loadAllUsageStats();
-            }, 500); // Wait 500ms before loading
+                if (!isLoadingStats) {  // Only load if not already loading
+                    loadAllUsageStats();
+                }
+            }, 1000); // Wait 1 second before loading
         }
     }
 }
