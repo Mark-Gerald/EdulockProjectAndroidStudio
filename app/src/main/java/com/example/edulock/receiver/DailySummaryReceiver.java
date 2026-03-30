@@ -12,6 +12,8 @@ import com.example.edulock.R;
 import com.example.edulock.utils.NotificationHelper;
 import com.example.edulock.utils.UsageTimeCalculator;
 
+import java.util.Calendar;
+
 /**
  * DAILY SUMMARY RECEIVER
  *
@@ -24,25 +26,32 @@ public class DailySummaryReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d(TAG, "Daily summary triggered at midnight");
+        Log.d(TAG, "Daily summary triggered");
 
         try {
+            // VALIDATION: Only process if it's midnight (within 5 minutes)
+            Calendar now = Calendar.getInstance();
+            int hour = now.get(Calendar.HOUR_OF_DAY);
+            int minute = now.get(Calendar.MINUTE);
+
+            // If not within 00:00 - 00:05 range, ignore
+            if (hour != 0 || minute > 5) {
+                Log.d(TAG, "Ignoring: Not midnight. Current time: " + hour + ":" + minute);
+                return;
+            }
+
             // 🔥 KEY FIX: Get PREVIOUS day's data, not today's!
-            // (Today is 0h 0m because it just started)
             long totalMillis = UsageTimeCalculator.getTotalScreenTimePreviousDay(context);
 
-            // Convert to hours and minutes
             String formattedTime = UsageTimeCalculator.formatTime(totalMillis);
-
             Log.d(TAG, "Total screen time YESTERDAY: " + formattedTime);
 
-            // Create and send notification
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_stats)
                     .setContentTitle("Daily Screen Time Summary")
                     .setContentText("Total Screen time of the day: " + formattedTime)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                    .setAutoCancel(true); // User can dismiss
+                    .setAutoCancel(true);
 
             NotificationManager manager =
                     (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);

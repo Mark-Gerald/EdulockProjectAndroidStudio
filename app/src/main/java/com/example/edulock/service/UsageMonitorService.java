@@ -36,6 +36,7 @@ public class UsageMonitorService extends Service {
     private static final String TAG = "UsageMonitorService";
     private static final int FOREGROUND_NOTIFICATION_ID = 1001;
     private static final int CHECK_INTERVAL_SECONDS = 60; // Check every 60 seconds
+    private static final int MIDNIGHT_ALARM_ID = 2024;
 
     private Handler handler = new Handler();
 
@@ -162,26 +163,41 @@ public class UsageMonitorService extends Service {
      */
     private void scheduleMidnightSummary() {
         Calendar calendar = Calendar.getInstance();
-        // Set to next midnight (00:00)
+
+        // Set to TOMORROW at midnight (00:00)
         calendar.add(Calendar.DAY_OF_YEAR, 1);
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
 
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         Intent intent = new Intent(this, DailySummaryReceiver.class);
+        intent.setAction("com.example.edulock.DAILY_SUMMARY"); // Add action to identify this alarm
 
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        // Use SAME request code so it doesn't create duplicates
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                MIDNIGHT_ALARM_ID,  // FIXED: Use constant instead of 0
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         if (alarmManager != null) {
-            // Set alarm to repeat every day
-            alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.getTimeInMillis(),
-                    pendingIntent
-            );
-            Log.d(TAG, "Scheduled daily summary for midnight");
+            try {
+                // Cancel any existing alarm first
+                alarmManager.cancel(pendingIntent);
+
+                // Set alarm to trigger at midnight and repeat every 24 hours
+                alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        calendar.getTimeInMillis(),
+                        pendingIntent
+                );
+                Log.d(TAG, "Scheduled daily summary for midnight: " + calendar.getTime());
+            } catch (Exception e) {
+                Log.e(TAG, "Error scheduling midnight alarm", e);
+            }
         }
     }
 

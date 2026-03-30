@@ -61,14 +61,13 @@ public class UsageTimeCalculator {
             }
         }
 
-        long now = System.currentTimeMillis();
-        for (String pkg : new HashMap<>(appStartTime).keySet()) {
-            Long start = appStartTime.get(pkg);
-            if (start != null) {
-                long duration = now - start;
-                appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + duration);
-            }
-        }
+        // 🔥 IMPORTANT FIX: DO NOT count currently open apps
+        // Only use data from COMPLETED sessions (apps that were paused)
+        // This prevents apps from continuing to accumulate time after closing
+
+        // Clear any unfinished sessions (don't add them)
+        appStartTime.clear();
+
         return appUsageMap;
     }
 
