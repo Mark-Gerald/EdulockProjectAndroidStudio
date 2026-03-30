@@ -90,7 +90,7 @@ public class StatsFragment extends Fragment {
         recentAppsRecyclerView = view.findViewById(R.id.recentAppsRecyclerView);
         searchApps = view.findViewById(R.id.searchApps);
         totalScreenTime = view.findViewById(R.id.totalScreenTime);
-        emptyStateMessage = view.findViewById(R.id.emptyStateMessage);  // 🔥 NEW: Find empty state TextView
+        emptyStateMessage = view.findViewById(R.id.emptyStateMessage);  // 🔥 NEW
 
         // 🔥 NEW: Initially hide empty state message
         if (emptyStateMessage != null) {
@@ -323,7 +323,7 @@ public class StatsFragment extends Fragment {
                 recentList.add(new RecentAppInfo(
                         packageName,
                         appName,
-                        lastUsedTimestamp, // Timestamp when app was last opened
+                        lastUsedTimestamp,
                         packageManager.getApplicationIcon(appInfo)
                 ));
 
@@ -344,36 +344,34 @@ public class StatsFragment extends Fragment {
         requireActivity().runOnUiThread(() -> {
             totalScreenTime.setText(UsageTimeCalculator.formatTime(totalTime));
 
+            // Update app usage list
             appUsageList.clear();
             appUsageList.addAll(appList);
             appUsageAdapter.notifyDataSetChanged();
+            Log.d(TAG, "Updated app usage list with " + appList.size() + " apps");
 
-            recentAppsList.clear();
-            recentAppsList.addAll(recentList);
-            recentAppsAdapter.notifyDataSetChanged();
+            // 🔥 FIX: Use adapter's updateData method instead of direct manipulation
+            recentAppsAdapter.updateData(recentList);
+            Log.d(TAG, "Called recentAppsAdapter.updateData() with " + recentList.size() + " items");
 
-            // 🔥 FIXED: Properly show/hide elements based on whether there are recent apps
+            // Show/hide empty state based on whether there are recent apps
             if (recentList.isEmpty()) {
-                Log.d(TAG, "No recent activities - showing empty state");
+                Log.d(TAG, "🟡 EMPTY - Showing empty state");
 
-                // Hide search and list
                 searchApps.setVisibility(View.GONE);
                 recentAppsRecyclerView.setVisibility(View.GONE);
 
-                // Show empty message
                 if (emptyStateMessage != null) {
                     emptyStateMessage.setVisibility(View.VISIBLE);
                     emptyStateMessage.setText("No Apps Currently in use.");
                     Log.d(TAG, "Empty state message set to VISIBLE");
                 }
             } else {
-                Log.d(TAG, "Found " + recentList.size() + " recent activities - showing list");
+                Log.d(TAG, "🟢 HAS APPS - Showing list with " + recentList.size() + " apps");
 
-                // Show search and list
                 searchApps.setVisibility(View.VISIBLE);
                 recentAppsRecyclerView.setVisibility(View.VISIBLE);
 
-                // Hide empty message
                 if (emptyStateMessage != null) {
                     emptyStateMessage.setVisibility(View.GONE);
                     Log.d(TAG, "Empty state message set to GONE");
