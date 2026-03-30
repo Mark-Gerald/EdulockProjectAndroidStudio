@@ -39,6 +39,7 @@ import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class statistics_usage_data extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, RestrictFragment.OnDeviceControlListener {
 
@@ -97,7 +98,7 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
             profileButton.setOnClickListener(v -> showProfileDialog());
 
             if (auth.getCurrentUser() != null) {
-                loadProfileImage();
+                loadProfileImageWithFirestore();
             } else {
                 Log.d("statistics_usage_data", "No user logged in");
                 profileButton.setImageResource(R.drawable.default_profile);
@@ -145,38 +146,55 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         profileFragment.show(getSupportFragmentManager(), "profile_dialog");
     }
 
-    private void loadProfileImage() {
+    // 🔥 NEW METHOD: Load profile from Firestore with fallback
+    private void loadProfileImageWithFirestore() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         ImageButton profileButton = findViewById(R.id.profile_button);
 
-        if (profileButton == null) {
-            Log.e("statistics_usage_data", "Profile button is null!");
+        if (profileButton == null || user == null) {
             return;
         }
 
-        if (user != null) {
-            Log.d("statistics_usage_data", "Current user: " + user.getEmail());
+        String userId = user.getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-            Uri photoUrl = user.getPhotoUrl();
-            if (photoUrl != null) {
-                Log.d("statistics_usage_data", "Photo URL found: " + photoUrl.toString());
+        db.collection("users").document(userId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // Try Firestore first
+                        String firestorePhotoUrl = documentSnapshot.getString("photoUrl");
+                        if (firestorePhotoUrl != null && !firestorePhotoUrl.isEmpty()) {
+                            Log.d("statistics_usage_data", "Loading from Firestore: " + firestorePhotoUrl);
+                            Glide.with(statistics_usage_data.this)
+                                    .load(firestorePhotoUrl)
+                                    .circleCrop()
+                                    .placeholder(R.drawable.default_profile)
+                                    .error(R.drawable.default_profile)
+                                    .into(profileButton);
+                            return;
+                        }
+                    }
 
-                Glide.with(this)
-                        .load(photoUrl)
-                        .circleCrop()
-                        .placeholder(R.drawable.default_profile)
-                        .error(R.drawable.default_profile)
-                        .into(profileButton);
-
-                Log.d("statistics_usage_data", "Profile image loaded successfully");
-            } else {
-                Log.d("statistics_usage_data", "Photo URL is null - using default");
-                profileButton.setImageResource(R.drawable.default_profile);
-            }
-        } else {
-            Log.e("statistics_usage_data", "User is null");
-            profileButton.setImageResource(R.drawable.default_profile);
-        }
+                    // Fallback to Firebase Auth
+                    Uri photoUrl = user.getPhotoUrl();
+                    if (photoUrl != null) {
+                        Log.d("statistics_usage_data", "Loading from Firebase Auth: " + photoUrl);
+                        Glide.with(statistics_usage_data.this)
+                                .load(photoUrl)
+                                .circleCrop()
+                                .placeholder(R.drawable.default_profile)
+                                .error(R.drawable.default_profile)
+                                .into(profileButton);
+                    } else {
+                        Log.d("statistics_usage_data", "No photo found - using default");
+                        profileButton.setImageResource(R.drawable.default_profile);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("statistics_usage_data", "Error loading profile: " + e.getMessage());
+                    profileButton.setImageResource(R.drawable.default_profile);
+                });
     }
 
     @Override
