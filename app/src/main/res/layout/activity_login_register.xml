@@ -154,6 +154,25 @@
                     app:backgroundTint="@null"
                     app:cornerRadius="24dp"/>
 
+                <!-- 🔥 NEW: Google Sign-In Button -->
+                <com.google.android.material.button.MaterialButton
+                android:id="@+id/google_sign_in_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:text="Sign in with Google"
+                android:textColor="@android:color/white"
+                app:backgroundTint="#4285F4"
+                android:drawableStart="@drawable/google_logo"
+                android:drawablePadding="8dp" />
+
+                <!-- OR use official Google Sign-In Button -->
+                <com.google.android.gms.common.SignInButton
+                    android:id="@+id/google_sign_in_official"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="16dp" />
+
                 <TextView
                     android:id="@+id/loginRedirectText"
                     android:layout_width="wrap_content"
