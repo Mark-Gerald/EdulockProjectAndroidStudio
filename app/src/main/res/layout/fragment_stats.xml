@@ -87,8 +87,21 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <!-- SEARCH -->
+                <!-- 🔥 NEW: EMPTY STATE MESSAGE (When no apps are tracked) -->
+                <TextView
+                    android:id="@+id/emptyStateMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:text="No Apps Currently in use."
+                    android:textSize="16sp"
+                    android:textColor="#80FFFFFF"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:textStyle="italic"/>
+
+                <!-- SEARCH (Will be hidden when empty) -->
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/searchContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
@@ -121,7 +134,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- LIST -->
+                <!-- LIST (Will be hidden when empty) -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/recentAppsRecyclerView"
                     android:layout_width="match_parent"
