@@ -1,7 +1,9 @@
 package com.example.edulock.ui.acitvity;
 
+import com.bumptech.glide.Glide;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,7 +23,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.bumptech.glide.Glide;
 import android.Manifest;
 import com.example.edulock.service.UsageMonitorService;
 import com.example.edulock.ui.about.AboutUsFragment;
@@ -92,10 +93,17 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         setSupportActionBar(toolbar);
 
         ImageButton profileButton = findViewById(R.id.profile_button);
-        profileButton.setOnClickListener(v -> showProfileDialog());
+        if (profileButton != null) {
+            profileButton.setOnClickListener(v -> showProfileDialog());
 
-        if (auth.getCurrentUser() != null) {
-            loadProfileImage();
+            if (auth.getCurrentUser() != null) {
+                loadProfileImage();
+            } else {
+                Log.d("statistics_usage_data", "No user logged in");
+                profileButton.setImageResource(R.drawable.default_profile);
+            }
+        } else {
+            Log.e("statistics_usage_data", "profile button not found in layout!");
         }
 
         drawerLayout = findViewById(R.id.drawer_layout);
@@ -141,14 +149,32 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         ImageButton profileButton = findViewById(R.id.profile_button);
 
-        if (user != null && user.getPhotoUrl() != null) {
-            Glide.with(this)
-                    .load(user.getPhotoUrl())
-                    .circleCrop()
-                    .placeholder(R.drawable.default_profile)
-                    .error(R.drawable.default_profile)
-                    .into(profileButton);
+        if (profileButton == null) {
+            Log.e("statistics_usage_data", "Profile button is null!");
+            return;
+        }
+
+        if (user != null) {
+            Log.d("statistics_usage_data", "Current user: " + user.getEmail());
+
+            Uri photoUrl = user.getPhotoUrl();
+            if (photoUrl != null) {
+                Log.d("statistics_usage_data", "Photo URL found: " + photoUrl.toString());
+
+                Glide.with(this)
+                        .load(photoUrl)
+                        .circleCrop()
+                        .placeholder(R.drawable.default_profile)
+                        .error(R.drawable.default_profile)
+                        .into(profileButton);
+
+                Log.d("statistics_usage_data", "Profile image loaded successfully");
+            } else {
+                Log.d("statistics_usage_data", "Photo URL is null - using default");
+                profileButton.setImageResource(R.drawable.default_profile);
+            }
         } else {
+            Log.e("statistics_usage_data", "User is null");
             profileButton.setImageResource(R.drawable.default_profile);
         }
     }
