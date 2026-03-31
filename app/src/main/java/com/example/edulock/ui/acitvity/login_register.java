@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.widget.NestedScrollView;
 
 import com.example.edulock.R;
+import com.example.edulock.utils.AuthStateManager;
 import com.example.edulock.utils.SoundManager;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -232,7 +233,6 @@ public class login_register extends AppCompatActivity {
     // 🔥 FIXED: Handle Sign In Result
     private void handleSignInResult(GoogleSignInAccount account) {
         try {
-            // 🔥 FIX: Create credential properly
             AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
 
             auth.signInWithCredential(credential)
@@ -241,24 +241,38 @@ public class login_register extends AppCompatActivity {
                         if (user != null) {
                             Log.d("Login", "✅ Firebase Sign-In successful");
 
-                            // 🔥 Save profile to Firestore
-                            saveUserProfileToFirestore(user);
+                            // NEW: Check if user exists in Firestore
+                            FirebaseFirestore db = FirebaseFirestore.getInstance();
+                            db.collection("users").document(user.getUid())
+                                    .get()
+                                    .addOnSuccessListener(documentSnapshot -> {
+                                        if (documentSnapshot.exists()) {
+                                            // User exists - go to dashboard
+                                            AuthStateManager authStateManager = new AuthStateManager(login_register.this);
+                                            authStateManager.markUserLoggedIn(true);
 
-                            // Navigate to main activity
-                            View loginCard = findViewById(R.id.loginCard);
-                            if (loginCard != null) {
-                                loginCard.animate()
-                                        .alpha(0f)
-                                        .translationY(-50f)
-                                        .setDuration(400)
-                                        .withEndAction(() -> {
-                                            Intent intent = new Intent(login_register.this, statistics_usage_data.class);
-                                            startActivity(intent);
-                                            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.fade_out);
-                                            finish();
-                                        })
-                                        .start();
-                            }
+                                            View loginCard = findViewById(R.id.loginCard);
+                                            loginCard.animate()
+                                                    .alpha(0f)
+                                                    .translationY(-50f)
+                                                    .setDuration(400)
+                                                    .withEndAction(() -> {
+                                                        Intent intent = new Intent(login_register.this, statistics_usage_data.class);
+                                                        startActivity(intent);
+                                                        overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.fade_out);
+                                                        finish();
+                                                    })
+                                                    .start();
+                                        } else {
+                                            // User not in Firestore - redirect to signup
+                                            redirectToSignUpWithEmail(user.getEmail(), user.getDisplayName());
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e("Login", "❌ Error checking user: " + e.getMessage());
+                                        Toast.makeText(login_register.this, "Error verifying account", Toast.LENGTH_SHORT).show();
+                                        auth.signOut();
+                                    });
                         }
                     })
                     .addOnFailureListener(e -> {
@@ -268,6 +282,14 @@ public class login_register extends AppCompatActivity {
         } catch (Exception e) {
             Log.e("Login", "❌ Error during sign-in: " + e.getMessage());
         }
+    }
+
+    private void redirectToSignUpWithEmail(String email, String displayName) {
+        Intent intent = new Intent(login_register.this, register_signup.class);
+        intent.putExtra("email", email);
+        intent.putExtra("displayName", displayName);
+        startActivity(intent);
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
     // 🔥 NEW METHOD: Save user profile to Firestore

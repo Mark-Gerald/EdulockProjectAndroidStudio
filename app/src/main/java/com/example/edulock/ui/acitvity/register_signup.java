@@ -21,6 +21,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.edulock.R;
+import com.example.edulock.utils.AuthStateManager;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -40,6 +41,9 @@ public class register_signup extends AppCompatActivity {
     private RadioGroup userTypeRadioGroup;
     private RadioButton selectedRadioButton;
 
+    // 🔥 NEW: Track if email is pre-filled from Google Sign-In
+    private boolean isGoogleSignInEmail = false;
+
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +57,9 @@ public class register_signup extends AppCompatActivity {
 
         // Initialize UI elements
         initializeUIElements();
+
+        // 🔥 NEW: Pre-fill email and name if coming from Google Sign-In
+        handleGoogleSignInData();
 
         // Set up click listeners
         setupClickListeners();
@@ -103,6 +110,39 @@ public class register_signup extends AppCompatActivity {
         styleLoginRedirectText();
     }
 
+    // 🔥 NEW: Handle Google Sign-In data if passed from login_register.java
+    private void handleGoogleSignInData() {
+        Intent intent = getIntent();
+
+        if (intent != null && intent.hasExtra("email")) {
+            String googleEmail = intent.getStringExtra("email");
+            String googleDisplayName = intent.getStringExtra("displayName");
+
+            // Pre-fill email
+            if (googleEmail != null && !googleEmail.isEmpty()) {
+                signupEmail.setText(googleEmail);
+                signupEmail.setEnabled(false); // Prevent editing
+                isGoogleSignInEmail = true;
+                Log.d(TAG, "✅ Pre-filled email from Google: " + googleEmail);
+            }
+
+            // Try to pre-fill name if available
+            if (googleDisplayName != null && !googleDisplayName.isEmpty()) {
+                String[] nameParts = googleDisplayName.split(" ");
+
+                if (nameParts.length >= 1) {
+                    signupFirstName.setText(nameParts[0]);
+                    Log.d(TAG, "✅ Pre-filled first name: " + nameParts[0]);
+                }
+
+                if (nameParts.length >= 2) {
+                    signupLastName.setText(nameParts[1]);
+                    Log.d(TAG, "✅ Pre-filled last name: " + nameParts[1]);
+                }
+            }
+        }
+    }
+
     private void setupClickListeners() {
         signupButton.setOnClickListener(v -> {
             v.animate()
@@ -147,7 +187,39 @@ public class register_signup extends AppCompatActivity {
         // Disable button and show progress
         signupButton.setEnabled(false);
 
-        // Create authentication
+        // 🔥 NEW: Check if this is Google Sign-In registration (account already created)
+        if (isGoogleSignInEmail) {
+            // Account already exists from Google Sign-In, just save profile to Firestore
+            FirebaseUser user = auth.getCurrentUser();
+            if (user != null) {
+                registerUserProfileOnly(user.getUid(), userFname, userLname, userEmail, userType);
+            } else {
+                signupButton.setEnabled(true);
+                Toast.makeText(this, "Error: User not authenticated", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            // Normal email/password registration
+            createUserWithEmailAndPassword(userEmail, pass, userFname, userLname, userType);
+        }
+    }
+
+    // 🔥 NEW: Register only the profile (for Google Sign-In users)
+    private void registerUserProfileOnly(String userId, String userFname, String userLname,
+                                         String userEmail, String userType) {
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("firstName", userFname);
+        userData.put("lastName", userLname);
+        userData.put("email", userEmail);
+        userData.put("userType", userType);
+        userData.put("createdAt", System.currentTimeMillis());
+        userData.put("profileImageUrl", "");
+
+        saveUserDataWithRetry(userId, userData, 3);
+    }
+
+    // 🔥 NEW: Standard email/password registration
+    private void createUserWithEmailAndPassword(String userEmail, String pass,
+                                                String userFname, String userLname, String userType) {
         auth.createUserWithEmailAndPassword(userEmail, pass)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
@@ -160,7 +232,7 @@ public class register_signup extends AppCompatActivity {
                             userData.put("email", userEmail);
                             userData.put("userType", userType);
                             userData.put("createdAt", System.currentTimeMillis());
-                            userData.put("profileImageUrl", ""); // Default empty for now
+                            userData.put("profileImageUrl", "");
 
                             // Save to Firestore with retry mechanism
                             saveUserDataWithRetry(user.getUid(), userData, 3);
@@ -179,6 +251,11 @@ public class register_signup extends AppCompatActivity {
                 .set(userData, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(register_signup.this, "Registration Successful", Toast.LENGTH_SHORT).show();
+
+                    // 🔥 NEW: Mark user as logged in
+                    AuthStateManager authStateManager = new AuthStateManager(register_signup.this);
+                    authStateManager.markUserLoggedIn(true);
+
                     // Navigate to main activity
                     Intent intent = new Intent(register_signup.this, statistics_usage_data.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -195,6 +272,11 @@ public class register_signup extends AppCompatActivity {
                         Toast.makeText(register_signup.this,
                                 "Account created but profile save failed. Please update profile later.",
                                 Toast.LENGTH_LONG).show();
+
+                        // 🔥 NEW: Still mark as logged in since auth succeeded
+                        AuthStateManager authStateManager = new AuthStateManager(register_signup.this);
+                        authStateManager.markUserLoggedIn(true);
+
                         // Navigate anyway since authentication succeeded
                         Intent intent = new Intent(register_signup.this, statistics_usage_data.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -217,13 +299,16 @@ public class register_signup extends AppCompatActivity {
             signupEmail.setError("Email Cannot Be Empty");
             return false;
         }
-        if (password.isEmpty()) {
-            signupPassword.setError("Password Cannot Be Empty");
-            return false;
-        }
-        if (password.length() < 6) {
-            signupPassword.setError("Password must be at least 6 characters");
-            return false;
+        // 🔥 UPDATED: Skip password validation if it's a Google Sign-In email
+        if (!isGoogleSignInEmail) {
+            if (password.isEmpty()) {
+                signupPassword.setError("Password Cannot Be Empty");
+                return false;
+            }
+            if (password.length() < 6) {
+                signupPassword.setError("Password must be at least 6 characters");
+                return false;
+            }
         }
         return true;
     }
