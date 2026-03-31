@@ -180,9 +180,11 @@ public class login_register extends AppCompatActivity {
         // 🔥 NEW: Google Sign-In Button Click Listener
         Button googleSignInButton = findViewById(R.id.google_sign_in_button);
         googleSignInButton.setOnClickListener(v -> {
-            Log.d("Login", "🔵 Google Sign-In button clicked");
-            Intent signInIntent = googleSignInClient.getSignInIntent();
-            startActivityForResult(signInIntent, RC_SIGN_IN);
+            googleSignInClient.signOut().addOnCompleteListener(task -> {
+                Log.d("Login", "🔵 Google Sign-In button clicked");
+                Intent signInIntent = googleSignInClient.getSignInIntent();
+                startActivityForResult(signInIntent, RC_SIGN_IN);
+            });
         });
 
         // Set up sign-up redirect listener
