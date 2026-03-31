@@ -24,6 +24,8 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import android.Manifest;
+import android.widget.Toast;
+
 import com.example.edulock.service.UsageMonitorService;
 import com.example.edulock.ui.about.AboutUsFragment;
 import com.example.edulock.ui.contact.ContactUsFragment;
@@ -34,6 +36,10 @@ import com.example.edulock.R;
 import com.example.edulock.ui.restrict.RestrictFragment;
 import com.example.edulock.ui.stats.StatsFragment;
 import com.example.edulock.service.BlockOverlayService;
+import com.example.edulock.utils.AuthStateManager;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.navigation.NavigationView;
@@ -201,6 +207,24 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
 
+        if (itemId == R.id.nav_logout) {  // Adjust the ID based on your menu
+            // Show confirmation dialog
+            new AlertDialog.Builder(this)
+                    .setTitle("Log Out")
+                    .setMessage("Are you sure you want to Log out?")
+                    .setPositiveButton("Confirm", (dialog, which) -> {
+                        // 🔥 NEW: Perform complete logout
+                        performCompleteLogout();
+                        dialog.dismiss();
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> {
+                        dialog.dismiss();
+                    })
+                    .show();
+
+            return true;
+        }
+
         if (itemId == R.id.nav_faqs) {
             openFragment(new FactsFragment());
         } else if (itemId == R.id.nav_about_us) {
@@ -213,6 +237,46 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
 
         drawerLayout.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void performCompleteLogout() {
+        try {
+            // 1. Clear AuthStateManager flag
+            AuthStateManager authStateManager = new AuthStateManager(statistics_usage_data.this);
+            authStateManager.clearAuthState();
+            Log.d("Logout", "✅ AuthStateManager cleared");
+
+            // 2. Sign out from Firebase
+            FirebaseAuth.getInstance().signOut();
+            Log.d("Logout", "✅ Firebase signed out");
+
+            // 3. Sign out from Google (if they used Google Sign-In)
+            try {
+                GoogleSignInClient googleSignInClient = GoogleSignIn.getClient(
+                        statistics_usage_data.this,
+                        new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
+                );
+                googleSignInClient.signOut();
+                Log.d("Logout", "✅ Google Sign-In signed out");
+            } catch (Exception e) {
+                Log.d("Logout", "Google Sign-Out not needed or failed: " + e.getMessage());
+            }
+
+            // 4. Show success message
+            Toast.makeText(statistics_usage_data.this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+
+            // 5. Navigate back to login page
+            Intent intent = new Intent(statistics_usage_data.this, login_register.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+
+            finish();
+
+        } catch (Exception e) {
+            Log.e("Logout", "❌ Error during logout: " + e.getMessage());
+            Toast.makeText(statistics_usage_data.this, "Logout failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     // Method to show a logout confirmation dialog
