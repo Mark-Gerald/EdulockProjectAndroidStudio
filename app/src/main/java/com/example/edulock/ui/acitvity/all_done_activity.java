@@ -14,6 +14,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.edulock.R;
+import com.example.edulock.utils.AuthStateManager;
 import com.example.edulock.utils.SoundManager;
 
 public class all_done_activity extends AppCompatActivity {
@@ -98,12 +99,16 @@ public class all_done_activity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 SoundManager.playButtonSound(all_done_activity.this);
+
+                AuthStateManager authStateManager = new AuthStateManager(all_done_activity.this);
+                authStateManager.markWelcomeCompleted();
+                authStateManager.markPermissionGranted();
 
                 Intent intent = new Intent(all_done_activity.this, login_register.class);
                 startActivity(intent);
                 overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                finish();
             }
         });
     }
