@@ -19,7 +19,7 @@ public class AuthStateManager {
         prefs.edit().putBoolean(KEY_WELCOME_COMPLETED, true).apply();
     }
 
-    public boolean isWelocomeCompleted() {
+    public boolean isWelcomeCompleted() {
         return prefs.getBoolean(KEY_WELCOME_COMPLETED, false);
     }
 
