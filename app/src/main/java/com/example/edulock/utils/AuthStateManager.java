@@ -14,4 +14,32 @@ public class AuthStateManager {
     public AuthStateManager(Context context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
+
+    public void markWelcomeCompleted() {
+        prefs.edit().putBoolean(KEY_WELCOME_COMPLETED, true).apply();
+    }
+
+    public boolean isWelocomeCompleted() {
+        return prefs.getBoolean(KEY_WELCOME_COMPLETED, false);
+    }
+
+    public void markPermissionGranted() {
+        prefs.edit().putBoolean(KEY_PERMISSION_GRANTED, true).apply();
+    }
+
+    public boolean arePermissionsGranted() {
+        return prefs.getBoolean(KEY_PERMISSION_GRANTED, false);
+    }
+
+    public void markUserLoggedIn(boolean isLoggedIn) {
+        prefs.edit().putBoolean(KEY_USER_LOGGED_IN, isLoggedIn).apply();
+    }
+
+    public boolean isUserLoggedIn() {
+        return prefs.getBoolean(KEY_USER_LOGGED_IN, false);
+    }
+
+    public void clearAuthState() {
+        prefs.edit().putBoolean(KEY_USER_LOGGED_IN, false).apply();
+    }
 }
