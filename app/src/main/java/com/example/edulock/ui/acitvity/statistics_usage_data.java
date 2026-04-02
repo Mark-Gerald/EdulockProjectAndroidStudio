@@ -152,7 +152,6 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         profileFragment.show(getSupportFragmentManager(), "profile_dialog");
     }
 
-    // 🔥 NEW METHOD: Load profile from Firestore with fallback
     private void loadProfileImageWithFirestore() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         ImageButton profileButton = findViewById(R.id.profile_button);
@@ -232,7 +231,7 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         } else if (itemId == R.id.nav_contact_us) {
             openFragment(new ContactUsFragment());
         } else if (itemId == R.id.nav_logout) {
-            showLogoutDialog(); // Call the method to show logout confirmation
+            showLogoutDialog();
         }
 
         drawerLayout.closeDrawer(GravityCompat.START);
