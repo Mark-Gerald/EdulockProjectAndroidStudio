@@ -50,8 +50,6 @@ public class all_done_activity extends AppCompatActivity {
         button.setScaleX(0.8f);
         button.setScaleY(0.8f);
 
-
-        //Image Animation
         image.animate()
                 .alpha(1f)
                 .translationY(0f)
@@ -59,27 +57,24 @@ public class all_done_activity extends AppCompatActivity {
                 .setInterpolator(new android.view.animation.DecelerateInterpolator())
                 .start();
 
-        //Title Animation
         title.animate()
                 .alpha(1f)
                 .setStartDelay(300)
                 .setDuration(500)
                 .start();
-        //Text1
+
         text1.animate()
                 .alpha(1f)
                 .setStartDelay(450)
                 .setDuration(500)
                 .start();
 
-        //Text2
         text2.animate()
                 .alpha(1f)
                 .setStartDelay(600)
                 .setDuration(500)
                 .start();
 
-        //Text3
         text3.animate()
                 .alpha(1f)
                 .setStartDelay(750)

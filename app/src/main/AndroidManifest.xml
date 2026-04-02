@@ -38,7 +38,6 @@
         android:preserveLegacyExternalStorage="true"
         tools:targetApi="31">
 
-        <!-- 🔥 NEW: SPLASH ACTIVITY AS LAUNCHER -->
         <activity
             android:name=".ui.acitvity.SplashActivity"
             android:exported="true">
@@ -73,7 +72,7 @@
         <activity
             android:name=".ui.acitvity.termsAndAgreement"
             android:exported="false" />
-        <!-- 🔥 UPDATED: MainActivity no longer has intent-filter -->
+
         <activity
             android:name=".ui.acitvity.MainActivity"
             android:exported="true" />

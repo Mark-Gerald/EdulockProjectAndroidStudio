@@ -228,7 +228,6 @@ public class login_register extends AppCompatActivity {
         signupRedirectText.setText(spannable);
     }
 
-    // 🔥 FIXED: Handle Sign In Result
     private void handleSignInResult(GoogleSignInAccount account) {
         try {
             AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
@@ -290,7 +289,6 @@ public class login_register extends AppCompatActivity {
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
-    // 🔥 NEW METHOD: Save user profile to Firestore
     private void saveUserProfileToFirestore(FirebaseUser user) {
         if (user == null) {
             Log.e("Login", "❌ User is null");
