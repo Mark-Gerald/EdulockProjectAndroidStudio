@@ -41,7 +41,6 @@ public class register_signup extends AppCompatActivity {
     private RadioGroup userTypeRadioGroup;
     private RadioButton selectedRadioButton;
 
-    // 🔥 NEW: Track if email is pre-filled from Google Sign-In
     private boolean isGoogleSignInEmail = false;
 
     @SuppressLint("MissingInflatedId")
@@ -58,7 +57,6 @@ public class register_signup extends AppCompatActivity {
         // Initialize UI elements
         initializeUIElements();
 
-        // 🔥 NEW: Pre-fill email and name if coming from Google Sign-In
         handleGoogleSignInData();
 
         // Set up click listeners
@@ -110,7 +108,6 @@ public class register_signup extends AppCompatActivity {
         styleLoginRedirectText();
     }
 
-    // 🔥 NEW: Handle Google Sign-In data if passed from login_register.java
     private void handleGoogleSignInData() {
         Intent intent = getIntent();
 
@@ -187,7 +184,6 @@ public class register_signup extends AppCompatActivity {
         // Disable button and show progress
         signupButton.setEnabled(false);
 
-        // 🔥 NEW: Check if this is Google Sign-In registration (account already created)
         if (isGoogleSignInEmail) {
             // Account already exists from Google Sign-In, just save profile to Firestore
             FirebaseUser user = auth.getCurrentUser();
@@ -203,7 +199,6 @@ public class register_signup extends AppCompatActivity {
         }
     }
 
-    // 🔥 NEW: Register only the profile (for Google Sign-In users)
     private void registerUserProfileOnly(String userId, String userFname, String userLname,
                                          String userEmail, String userType) {
         Map<String, Object> userData = new HashMap<>();
@@ -217,7 +212,6 @@ public class register_signup extends AppCompatActivity {
         saveUserDataWithRetry(userId, userData, 3);
     }
 
-    // 🔥 NEW: Standard email/password registration
     private void createUserWithEmailAndPassword(String userEmail, String pass,
                                                 String userFname, String userLname, String userType) {
         auth.createUserWithEmailAndPassword(userEmail, pass)
@@ -273,7 +267,6 @@ public class register_signup extends AppCompatActivity {
                                 "Account created but profile save failed. Please update profile later.",
                                 Toast.LENGTH_LONG).show();
 
-                        // 🔥 NEW: Still mark as logged in since auth succeeded
                         AuthStateManager authStateManager = new AuthStateManager(register_signup.this);
                         authStateManager.markUserLoggedIn(true);
 
@@ -299,7 +292,7 @@ public class register_signup extends AppCompatActivity {
             signupEmail.setError("Email Cannot Be Empty");
             return false;
         }
-        // 🔥 UPDATED: Skip password validation if it's a Google Sign-In email
+
         if (!isGoogleSignInEmail) {
             if (password.isEmpty()) {
                 signupPassword.setError("Password Cannot Be Empty");
