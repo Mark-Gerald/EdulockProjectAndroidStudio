@@ -201,45 +201,40 @@ public class TimeLimitActivity extends AppCompatActivity {
 
     private void loadInstalledApps() {
         new Thread(() -> {
-            loadInstalledApps();
 
             PackageManager packageManager = getPackageManager();
             List<ApplicationInfo> apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
+
             allApps.clear();
             userApps.clear();
 
             String myPackageName = getPackageName();
 
             for (ApplicationInfo appInfo : apps) {
-                if (appInfo.packageName.equals(myPackageName)) {
-                    continue;
-                }
+                if (appInfo.packageName.equals(myPackageName)) continue;
 
-                if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
-                    continue;
-                }
+                if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) continue;
 
-                if (packageManager.getLaunchIntentForPackage(appInfo.packageName) == null) {
-                    continue;
-                }
+                if (packageManager.getLaunchIntentForPackage(appInfo.packageName) == null) continue;
 
                 try {
                     String appName = packageManager.getApplicationLabel(appInfo).toString();
                     Drawable appIcon = packageManager.getApplicationIcon(appInfo);
+
                     AppInfo app = new AppInfo(appName, appInfo.packageName, appIcon);
                     userApps.add(app);
                     allApps.add(app);
+
                 } catch (Exception e) {
                     Log.e(TAG, "Error loading app info: " + e.getMessage());
                 }
             }
 
-            userApps.sort((app1, app2) -> app1.getAppName().compareToIgnoreCase(app2.getAppName()));
+            userApps.sort((a, b) -> a.getAppName().compareToIgnoreCase(b.getAppName()));
             appList = userApps;
-            displayApps(userApps);
-            Log.d(TAG, "Loaded " + userApps.size() + " user apps");
 
             runOnUiThread(() -> displayApps(userApps));
+
         }).start();
     }
 

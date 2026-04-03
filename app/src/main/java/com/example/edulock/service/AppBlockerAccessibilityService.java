@@ -23,8 +23,6 @@ import android.view.LayoutInflater;
 import android.graphics.PixelFormat;
 import android.view.View;
 import android.widget.Button;
-
-import com.example.edulock.ui.acitvity.MainActivity;
 import com.example.edulock.R;
 
 public class AppBlockerAccessibilityService extends AccessibilityService {
@@ -37,51 +35,13 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private String currentForegroundApp = "";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private SharedPreferences preferences;
-    private HashMap<String, Long> appUsageTimes = new HashMap<>();
-    private HashMap<String, Long> lastUsedMap = new HashMap<>();
     private HashMap<String, Integer> appLimits = new HashMap<>();
 
     private static final boolean DEBUG = false;
 
     private View overlayView = null;
 
-    private Handler timerHandler = new Handler(Looper.getMainLooper());
     private Handler overlayMonitor = new Handler(Looper.getMainLooper());
-
-    private Runnable timerRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (restrictedApps.contains(currentForegroundApp)) {
-                long now = System.currentTimeMillis();
-
-                Long lastTime = lastUsedMap.get(currentForegroundApp);
-                if (lastTime == null) lastTime = now;
-
-                long diff = (now - lastTime) / 1000;
-
-                long currentUsage = appUsageTimes.getOrDefault(currentForegroundApp, 0L);
-                currentUsage += diff;
-
-                appUsageTimes.put(currentForegroundApp, currentUsage);
-                lastUsedMap.put(currentForegroundApp, now);
-
-                int limit = appLimits.getOrDefault(currentForegroundApp, 1);
-
-                if (DEBUG) {
-                    Log.d(TAG, "Timer: " + currentForegroundApp + " used for " + currentUsage + " seconds. Limit: " + limit + " minutes");
-                }
-
-                if (currentUsage >= limit * 60) {
-                    showBlockingOverlay();
-                } else {
-                    timerHandler.postDelayed(this, 1000);
-                }
-
-            } else {
-                if (DEBUG) Log.v(TAG, "No restricted apps in foreground");
-            }
-        }
-    };
 
     private Runnable overlayCheck = new Runnable() {
         @Override
@@ -103,18 +63,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         loadRestrictions();
         startMonitoringService();
 
-        timerHandler.post(timerRunnable);
-
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                appUsageTimes.clear();
-                lastUsedMap.clear();
-
-                handler.postDelayed(this, 86400000);
-            }
-        }, 86400000);
-
         Log.d(TAG, "AppBlockerAccessibilityService created");
     }
 
@@ -122,10 +70,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             String newApp = event.getPackageName().toString();
-
-            if (!currentForegroundApp.equals(newApp)) {
-                lastUsedMap.put(currentForegroundApp, System.currentTimeMillis());
-            }
 
             currentForegroundApp = newApp;
 
@@ -162,14 +106,9 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void checkAndBlockIfRestricted(String packageName) {
-       if (!restrictedApps.contains(packageName)) return;
+        if (!restrictedApps.contains(packageName)) return;
 
-       long currentUsage = appUsageTimes.getOrDefault(packageName, 0L);
-       int limit = appLimits.getOrDefault(packageName, 1);
-
-       if (currentUsage >= limit * 60) {
-            showBlockingOverlay();
-       }
+        showBlockingOverlay(); // let AppMonitoringService decide WHEN
     }
 
     private void removeOverlayIfPresent() {
@@ -283,7 +222,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
-        timerHandler.removeCallbacksAndMessages(null);
         Log.d(TAG, "AppBlockerAccessibilityService destroyed");
     }
 

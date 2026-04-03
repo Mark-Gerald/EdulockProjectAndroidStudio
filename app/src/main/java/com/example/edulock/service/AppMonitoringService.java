@@ -256,6 +256,11 @@ public class AppMonitoringService extends Service {
     @SuppressLint({"ForegroundServiceType", "MissingPermission"})
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
+        if (intent != null && "UPDATE_RESTRICTIONS".equals(intent.getAction())) {
+            updateRestrictions();
+        }
+
         Log.d(TAG, "onStartCommand called with startId: " + startId);
 
         // Ensure foreground is started immediately
