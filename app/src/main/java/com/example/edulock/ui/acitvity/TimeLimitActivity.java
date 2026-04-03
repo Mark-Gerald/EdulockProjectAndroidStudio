@@ -200,41 +200,47 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void loadInstalledApps() {
-        PackageManager packageManager = getPackageManager();
-        List<ApplicationInfo> apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
-        allApps.clear();
-        userApps.clear();
+        new Thread(() -> {
+            loadInstalledApps();
 
-        String myPackageName = getPackageName();
+            PackageManager packageManager = getPackageManager();
+            List<ApplicationInfo> apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
+            allApps.clear();
+            userApps.clear();
 
-        for (ApplicationInfo appInfo : apps) {
-            if (appInfo.packageName.equals(myPackageName)) {
-                continue;
+            String myPackageName = getPackageName();
+
+            for (ApplicationInfo appInfo : apps) {
+                if (appInfo.packageName.equals(myPackageName)) {
+                    continue;
+                }
+
+                if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
+                    continue;
+                }
+
+                if (packageManager.getLaunchIntentForPackage(appInfo.packageName) == null) {
+                    continue;
+                }
+
+                try {
+                    String appName = packageManager.getApplicationLabel(appInfo).toString();
+                    Drawable appIcon = packageManager.getApplicationIcon(appInfo);
+                    AppInfo app = new AppInfo(appName, appInfo.packageName, appIcon);
+                    userApps.add(app);
+                    allApps.add(app);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error loading app info: " + e.getMessage());
+                }
             }
 
-            if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
-                continue;
-            }
+            userApps.sort((app1, app2) -> app1.getAppName().compareToIgnoreCase(app2.getAppName()));
+            appList = userApps;
+            displayApps(userApps);
+            Log.d(TAG, "Loaded " + userApps.size() + " user apps");
 
-            if (packageManager.getLaunchIntentForPackage(appInfo.packageName) == null) {
-                continue;
-            }
-
-            try {
-                String appName = packageManager.getApplicationLabel(appInfo).toString();
-                Drawable appIcon = packageManager.getApplicationIcon(appInfo);
-                AppInfo app = new AppInfo(appName, appInfo.packageName, appIcon);
-                userApps.add(app);
-                allApps.add(app);
-            } catch (Exception e) {
-                Log.e(TAG, "Error loading app info: " + e.getMessage());
-            }
-        }
-
-        userApps.sort((app1, app2) -> app1.getAppName().compareToIgnoreCase(app2.getAppName()));
-        appList = userApps;
-        displayApps(userApps);
-        Log.d(TAG, "Loaded " + userApps.size() + " user apps");
+            runOnUiThread(() -> displayApps(userApps));
+        }).start();
     }
 
     private void displayApps(List<AppInfo> apps) {
@@ -254,6 +260,13 @@ public class TimeLimitActivity extends AppCompatActivity {
             appsContainer.addView(noAppsText);
             return;
         }
+
+        apps.sort((a, b) -> {
+            boolean aSelected = selectedApps.contains(a.getPackageName());
+            boolean bSelected = selectedApps.contains(b.getPackageName());
+
+            return Boolean.compare(bSelected, aSelected);
+        });
 
         for (AppInfo app : apps) {
             View appView = inflater.inflate(R.layout.item_app_checkbox, appsContainer, false);
