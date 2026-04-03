@@ -73,9 +73,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
 
                 if (currentUsage >= limit * 60) {
                     showBlockingOverlay();
-                    startOverlayMonitoring();
-                    return;
+                } else {
+                    timerHandler.postDelayed(this, 1000);
                 }
+
             } else {
                 if (DEBUG) Log.v(TAG, "No restricted apps in foreground");
             }
@@ -108,10 +109,12 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                loadRestrictions();
-                handler.postDelayed(this, 60000);
+                appUsageTimes.clear();
+                lastUsedMap.clear();
+
+                handler.postDelayed(this, 86400000);
             }
-        }, 60000);
+        }, 86400000);
 
         Log.d(TAG, "AppBlockerAccessibilityService created");
     }
@@ -121,8 +124,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             String newApp = event.getPackageName().toString();
 
-            if (!newApp.equals(currentForegroundApp)) {
-                lastUsedMap.put(newApp, System.currentTimeMillis());
+            if (!currentForegroundApp.equals(newApp)) {
+                lastUsedMap.put(currentForegroundApp, System.currentTimeMillis());
             }
 
             currentForegroundApp = newApp;
@@ -239,7 +242,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_app_blocked, null);
 
         Button btnGoHome = overlayView.findViewById(R.id.btn_go_home);
-        Button btnManageRestrictions = overlayView.findViewById(R.id.btn_manage_restrictions);
+
+        btnGoHome.setText("Leave App");
 
         btnGoHome.setOnClickListener(v -> {
             windowManager.removeView(overlayView);
@@ -249,13 +253,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             homeIntent.addCategory(Intent.CATEGORY_HOME);
             homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(homeIntent);
-        });
-
-        btnManageRestrictions.setOnClickListener(v -> {
-            windowManager.removeView(overlayView);
-            Intent settingsIntent = new Intent(this, MainActivity.class);
-            settingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(settingsIntent);
         });
 
         windowManager.addView(overlayView, params);
@@ -289,5 +286,9 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         handler.removeCallbacksAndMessages(null);
         timerHandler.removeCallbacksAndMessages(null);
         Log.d(TAG, "AppBlockerAccessibilityService destroyed");
+    }
+
+    private void sendTimeUpNotification(String packageName, int limit) {
+        Log.d(TAG, "Time's up for " + packageName);
     }
 }
