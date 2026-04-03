@@ -8,12 +8,7 @@ import android.util.Log;
 
 import com.example.edulock.service.UsageMonitorService;
 
-/**
- * BOOT RECEIVER
- *
- * Restarts the monitoring service when phone reboots
- * This ensures notifications work even after phone restart
- */
+
 public class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "BootReceiver";
 
