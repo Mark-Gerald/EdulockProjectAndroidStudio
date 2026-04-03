@@ -80,7 +80,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             } else {
                 if (DEBUG) Log.v(TAG, "No restricted apps in foreground");
             }
-            timerHandler.postDelayed(this, 1000);
         }
     };
 
