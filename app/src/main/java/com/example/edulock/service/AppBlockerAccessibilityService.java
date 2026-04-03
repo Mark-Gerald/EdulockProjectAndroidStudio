@@ -119,19 +119,15 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            ComponentName componentName = new ComponentName(
-                    String.valueOf(event.getPackageName()),
-                    String.valueOf(event.getClassName())
-            );
+            String newApp = event.getPackageName().toString();
 
-            ActivityInfo activityInfo = tryGetActivity(componentName);
-            boolean isActivity = activityInfo != null;
-
-            if (isActivity) {
-                currentForegroundApp = event.getPackageName().toString();
-                // Add immediate check for restricted apps here
-                checkAndBlockIfRestricted(currentForegroundApp);
+            if (!newApp.equals(currentForegroundApp)) {
+                lastUsedMap.put(newApp, System.currentTimeMillis());
             }
+
+            currentForegroundApp = newApp;
+
+            checkAndBlockIfRestricted(currentForegroundApp);
         }
     }
 
@@ -164,18 +160,15 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void checkAndBlockIfRestricted(String packageName) {
-        if (isAppRestricted(packageName)) {
-            // Check if app usage time exceeds limit before showing overlay
-            long currentUsage = appUsageTimes.getOrDefault(packageName, 0L);
-            if (currentUsage >= appLimits.getOrDefault(packageName, 1)) {
-                Intent blockIntent = new Intent(this, OverlayBlockedActivity.class);
-                blockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                blockIntent.putExtra("blocked_package", packageName);
-                startActivity(blockIntent);
-            }
-        }
+       if (!isAppRestricted(packageName)) return;
+
+       long currentUsage = appUsageTimes.getOrDefault(packageName, 0L);
+       int limit = appLimits.getOrDefault(packageName, 1);
+
+       if (currentUsage >= limit * 60) {
+            showBlockingOverlay();
+            startOverlayMonitoring();
+       }
     }
 
     private void removeOverlayIfPresent() {
@@ -212,7 +205,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         for (String app : restrictedApps) {
             appLimits.put(app, globalLimit);
         }
-        Log.d(TAG, "Loaded " + restrictedApps.size() + " restricted apps with time limit: " + appLimits + " minutes");
+        Log.d(TAG, "Loaded " + restrictedApps.size() + " apps");
     }
 
     private void startMonitoringService() {
@@ -251,6 +244,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
 
         btnGoHome.setOnClickListener(v -> {
             windowManager.removeView(overlayView);
+            overlayView = null;
+
             Intent homeIntent = new Intent(Intent.ACTION_MAIN);
             homeIntent.addCategory(Intent.CATEGORY_HOME);
             homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -272,7 +267,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                 | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                 | WindowManager.LayoutParams.FLAG_FULLSCREEN
