@@ -39,8 +39,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private SharedPreferences preferences;
     private HashMap<String, Long> appUsageTimes = new HashMap<>();
-
-    private int timeLimit;
+    private HashMap<String, Long> lastUsedMap = new HashMap<>();
+    private HashMap<String, Integer> appLimits = new HashMap<>();
 
     private static final boolean DEBUG = false;
 
@@ -53,19 +53,27 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         @Override
         public void run() {
             if (restrictedApps.contains(currentForegroundApp)) {
+                long now = System.currentTimeMillis();
+
+                Long lastTime = lastUsedMap.get(currentForegroundApp);
+                if (lastTime == null) lastTime = now;
+
+                long diff = (now - lastTime) / 1000;
+
                 long currentUsage = appUsageTimes.getOrDefault(currentForegroundApp, 0L);
-                currentUsage += 1; // Increment by 1 second
+                currentUsage += diff;
+
                 appUsageTimes.put(currentForegroundApp, currentUsage);
+                lastUsedMap.put(currentForegroundApp, now);
+
+                int limit = appLimits.getOrDefault(currentForegroundApp, 1);
 
                 if (DEBUG) {
-                    Log.d(TAG, "Timer: " + currentForegroundApp + " used for " + currentUsage + " seconds. Limit: " + timeLimit + " minutes");
+                    Log.d(TAG, "Timer: " + currentForegroundApp + " used for " + currentUsage + " seconds. Limit: " + limit + " minutes");
                 }
 
-                if (currentUsage >= timeLimit * 60) {
-                    timerHandler.removeCallbacks(this);
+                if (currentUsage >= limit * 60) {
                     showBlockingOverlay();
-                    // Start continuous overlay monitoring when time limit is reached
-                    startOverlayMonitoring();
                     return;
                 }
             } else {
@@ -150,7 +158,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private boolean isAppRestricted(String packageName) {
-        SharedPreferences prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Set<String> restrictedApps = prefs.getStringSet("restricted_apps", new HashSet<>());
         return restrictedApps.contains(packageName);
     }
@@ -159,7 +167,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         if (isAppRestricted(packageName)) {
             // Check if app usage time exceeds limit before showing overlay
             long currentUsage = appUsageTimes.getOrDefault(packageName, 0L);
-            if (currentUsage >= timeLimit * 60) {
+            if (currentUsage >= appLimits.getOrDefault(packageName, 1)) {
                 Intent blockIntent = new Intent(this, OverlayBlockedActivity.class);
                 blockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
                         Intent.FLAG_ACTIVITY_CLEAR_TOP |
@@ -196,8 +204,15 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private void loadRestrictions() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         restrictedApps = new HashSet<>(prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>()));
-        timeLimit = prefs.getInt(KEY_TIME_LIMIT, 1); // Store the time limit
-        Log.d(TAG, "Loaded " + restrictedApps.size() + " restricted apps with time limit: " + timeLimit + " minutes");
+        Set<String> apps = prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
+        restrictedApps = new HashSet<>(apps);
+
+        int globalLimit = prefs.getInt(KEY_TIME_LIMIT, 1);
+
+        for (String app : restrictedApps) {
+            appLimits.put(app, globalLimit);
+        }
+        Log.d(TAG, "Loaded " + restrictedApps.size() + " restricted apps with time limit: " + appLimits + " minutes");
     }
 
     private void startMonitoringService() {
@@ -222,6 +237,8 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void showBlockingOverlay() {
+        if (overlayView != null) return;
+
         WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         // Use the new createOverlayParams method
         WindowManager.LayoutParams params = createOverlayParams();
