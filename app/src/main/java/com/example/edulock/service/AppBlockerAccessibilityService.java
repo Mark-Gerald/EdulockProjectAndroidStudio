@@ -25,7 +25,6 @@ import android.view.View;
 import android.widget.Button;
 
 import com.example.edulock.ui.acitvity.MainActivity;
-import com.example.edulock.ui.acitvity.OverlayBlockedActivity;
 import com.example.edulock.R;
 
 public class AppBlockerAccessibilityService extends AccessibilityService {
@@ -74,6 +73,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
 
                 if (currentUsage >= limit * 60) {
                     showBlockingOverlay();
+                    startOverlayMonitoring();
                     return;
                 }
             } else {
@@ -265,11 +265,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private WindowManager.LayoutParams createOverlayParams() {
         WindowManager.LayoutParams params = new WindowManager.LayoutParams();
         params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                | WindowManager.LayoutParams.FLAG_FULLSCREEN
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                | WindowManager.LayoutParams.FLAG_FULLSCREEN
                 | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 | WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON;
         params.format = PixelFormat.TRANSLUCENT;
