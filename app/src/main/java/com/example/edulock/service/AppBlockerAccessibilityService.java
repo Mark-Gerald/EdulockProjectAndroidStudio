@@ -160,14 +160,13 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     }
 
     private void checkAndBlockIfRestricted(String packageName) {
-       if (!isAppRestricted(packageName)) return;
+       if (!restrictedApps.contains(packageName)) return;
 
        long currentUsage = appUsageTimes.getOrDefault(packageName, 0L);
        int limit = appLimits.getOrDefault(packageName, 1);
 
        if (currentUsage >= limit * 60) {
             showBlockingOverlay();
-            startOverlayMonitoring();
        }
     }
 
