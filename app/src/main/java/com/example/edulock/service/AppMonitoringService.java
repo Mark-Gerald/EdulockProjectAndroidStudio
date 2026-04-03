@@ -380,11 +380,6 @@ public class AppMonitoringService extends Service {
         return null;
     }
 
-    public void onOverlayDismissed() {
-        isOverlayShowing.set(false);
-        resetUsageTimes();
-    }
-
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);

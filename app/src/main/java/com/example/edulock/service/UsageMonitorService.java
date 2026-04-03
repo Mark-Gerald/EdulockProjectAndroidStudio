@@ -22,16 +22,6 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * USAGE MONITORING SERVICE
- *
- * This service:
- * 1. Runs in the background continuously (foreground service = survives app kill)
- * 2. Checks app usage every 60 seconds
- * 3. Sends notifications when usage reaches 1h, 2h, 3h, 4h, 5h, etc.
- * 4. Each notification only shows ONCE per day
- * 5. Schedules daily summary at midnight
- */
 public class UsageMonitorService extends Service {
     private static final String TAG = "UsageMonitorService";
     private static final int FOREGROUND_NOTIFICATION_ID = 1001;
@@ -64,10 +54,7 @@ public class UsageMonitorService extends Service {
         startMonitoring();
     }
 
-    /**
-     * MAIN MONITORING LOOP
-     * Runs every 60 seconds to check if user has exceeded time limits
-     */
+
     private void startMonitoring() {
         handler.post(new Runnable() {
             @Override
