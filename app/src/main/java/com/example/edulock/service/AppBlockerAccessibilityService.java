@@ -37,8 +37,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private SharedPreferences preferences;
     private HashMap<String, Integer> appLimits = new HashMap<>();
 
-    private static final boolean DEBUG = false;
-
     private View overlayView = null;
 
     @Override
