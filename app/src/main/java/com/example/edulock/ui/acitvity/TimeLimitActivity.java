@@ -171,26 +171,27 @@ public class TimeLimitActivity extends AppCompatActivity {
 
     private void setupSelectAllCheckbox() {
         CheckBox selectAllCheckBox = findViewById(R.id.select_all_checkbox);
-        if (selectAllCheckBox != null) {
-            selectAllCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                for (int i = 0; i < appsContainer.getChildCount(); i++) {
-                    View appView = appsContainer.getChildAt(i);
-                    CheckBox appCheckBox = appView.findViewById(R.id.app_checkbox);
-                    if (appCheckBox != null) {
-                        appCheckBox.setChecked(isChecked);
-                    }
-                }
 
-                if (isChecked) {
-                    selectedApps.clear();
-                    for (AppInfo app : userApps) {
-                        selectedApps.add(app.getPackageName());
+        selectAllCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+
+            selectedApps.clear(); // 🔥 IMPORTANT
+
+            for (int i = 0; i < appsContainer.getChildCount(); i++) {
+                View appView = appsContainer.getChildAt(i);
+                CheckBox appCheckBox = appView.findViewById(R.id.app_checkbox);
+
+                if (appCheckBox != null) {
+                    appCheckBox.setChecked(isChecked);
+
+                    if (isChecked) {
+                        String packageName = userApps.get(i).getPackageName();
+                        selectedApps.add(packageName);
                     }
-                } else {
-                    selectedApps.clear();
                 }
-            });
-        }
+            }
+
+            Log.d("TimeLimitActivity", "SelectAll apps: " + selectedApps.size());
+        });
     }
 
     private void setupButtons() {
@@ -273,14 +274,18 @@ public class TimeLimitActivity extends AppCompatActivity {
             appIconView.setImageDrawable(app.getAppIcon());
             appCheckBox.setChecked(selectedApps.contains(app.getPackageName()));
 
+            appCheckBox.setOnCheckedChangeListener(null); // 🔥 IMPORTANT (prevents auto-trigger bug)
+
+            appCheckBox.setChecked(selectedApps.contains(app.getPackageName()));
+
             appCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
-                    if (!selectedApps.contains(app.getPackageName())) {
-                        selectedApps.add(app.getPackageName());
-                    }
+                    selectedApps.add(app.getPackageName());
                 } else {
                     selectedApps.remove(app.getPackageName());
                 }
+
+                Log.d("TimeLimitActivity", "Selected apps now: " + selectedApps.size()); // 🔍 DEBUG
                 updateSelectAllCheckboxState();
             });
 
