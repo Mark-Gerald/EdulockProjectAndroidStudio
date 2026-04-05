@@ -339,7 +339,7 @@ public class TimeLimitActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = preferences.edit();
         editor.putStringSet(KEY_RESTRICTED_APPS, restrictedApps);
         editor.putInt(KEY_TIME_LIMIT, selectedTimeLimit);
-        editor.apply();
+        editor.commit();
 
         Intent updateIntent = new Intent(this, AppMonitoringService.class);
         updateIntent.setAction("UPDATE_RESTRICTIONS");
