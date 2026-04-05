@@ -41,21 +41,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
 
     private View overlayView = null;
 
-    private Handler overlayMonitor = new Handler(Looper.getMainLooper());
-
-    private Runnable overlayCheck = new Runnable() {
-        @Override
-        public void run() {
-            if (restrictedApps.contains(currentForegroundApp)) {
-                showBlockingOverlay();
-            }
-            overlayMonitor.postDelayed(this, 100); // Check every 100ms
-        }
-    };
-
-    private void startOverlayMonitoring() {
-        overlayMonitor.post(overlayCheck);
-    }
     @Override
     public void onCreate() {
         super.onCreate();
@@ -72,8 +57,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             String newApp = event.getPackageName().toString();
 
             currentForegroundApp = newApp;
-
-            checkAndBlockIfRestricted(currentForegroundApp);
         }
     }
 
@@ -103,12 +86,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Set<String> restrictedApps = prefs.getStringSet("restricted_apps", new HashSet<>());
         return restrictedApps.contains(packageName);
-    }
-
-    private void checkAndBlockIfRestricted(String packageName) {
-        if (!restrictedApps.contains(packageName)) return;
-
-        showBlockingOverlay(); // let AppMonitoringService decide WHEN
     }
 
     private void removeOverlayIfPresent() {
@@ -155,45 +132,6 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         } else {
             startService(serviceIntent);
         }
-    }
-
-    private void checkAndBlockRestrictedApp() {
-        if (restrictedApps.contains(currentForegroundApp)) {
-            showBlockingOverlay();
-            // Force immediate overlay display
-            new Handler(Looper.getMainLooper()).post(() -> {
-                if (overlayView != null && overlayView.getParent() == null) {
-                    showBlockingOverlay();
-                }
-            });
-        }
-    }
-
-    private void showBlockingOverlay() {
-        if (overlayView != null) return;
-
-        WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        // Use the new createOverlayParams method
-        WindowManager.LayoutParams params = createOverlayParams();
-        params.gravity = Gravity.CENTER;
-
-        overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_app_blocked, null);
-
-        Button btnGoHome = overlayView.findViewById(R.id.btn_go_home);
-
-        btnGoHome.setText("Leave App");
-
-        btnGoHome.setOnClickListener(v -> {
-            windowManager.removeView(overlayView);
-            overlayView = null;
-
-            Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-            homeIntent.addCategory(Intent.CATEGORY_HOME);
-            homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(homeIntent);
-        });
-
-        windowManager.addView(overlayView, params);
     }
 
     private WindowManager.LayoutParams createOverlayParams() {

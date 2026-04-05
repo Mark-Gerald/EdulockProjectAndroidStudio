@@ -49,7 +49,7 @@ public class AppMonitoringService extends Service {
     private static final String CHANNEL_ID = "EduLockChannel";
     private static final String PREFS_NAME = "app_restrictions";
     private static final String KEY_RESTRICTED_APPS = "restricted_apps";
-    private static final String KEY_TIME_LIMIT = "time_limit";
+    private static final String KEY_TIME_LIMIT = "selected_time_limit";
     private static final int DEFAULT_TIME_LIMIT = 1;
 
     // Atomic boolean for overlay state to avoid synchronization blocks
@@ -367,10 +367,18 @@ public class AppMonitoringService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
+        int appCount = restrictedApps.size();
+
+        String text;
+        if (appCount == 1) {
+            text = "Monitoring 1 app with " + timeLimit + " min limit";
+        } else {
+            text = "Monitoring " + appCount + " apps with " + timeLimit + " min limit";
+        }
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(getString(R.string.edulock_active))
-                .setContentText(getString(R.string.monitoring_apps_message,
-                        restrictedApps.size(), timeLimit))
+                .setContentText(text)
                 .setSmallIcon(R.drawable.ic_timer)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
