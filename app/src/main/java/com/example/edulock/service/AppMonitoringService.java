@@ -72,7 +72,7 @@ public class AppMonitoringService extends Service {
     private volatile String lastForegroundApp = "";
 
 
-    private static final long CHECK_INTERVAL_SECONDS = 15;
+    private static final long CHECK_INTERVAL_SECONDS = 1;
     private static final long OVERLAY_SHOW_DELAY_MS = 500;
 
     // Background monitoring task
@@ -81,7 +81,7 @@ public class AppMonitoringService extends Service {
         public void run() {
             try {
                 if (!isOverlayShowing.get()) {
-                    String currentApp = getCurrentForegroundApp();
+                    String currentApp = lastForegroundApp;
                     Log.d(TAG, "Current foreground app: " + currentApp);
 
                     if (!currentApp.isEmpty() && !currentApp.equals(getPackageName())) {
@@ -143,7 +143,6 @@ public class AppMonitoringService extends Service {
 
         // Start foreground immediately with a temporary notification
         createNotificationChannel();
-        startForeground(NOTIFICATION_ID, createInitialNotification());
 
         try {
             // Initialize core components first
@@ -259,9 +258,18 @@ public class AppMonitoringService extends Service {
 
         if (intent != null && "APP_SWITCHED".equals(intent.getAction())) {
             String packageName = intent.getStringExtra("package_name");
+
             if (packageName != null) {
                 lastForegroundApp = packageName;
-                Log.d(TAG, "Foreground app updated from Accessibility: " + packageName);
+
+                // RESET TIMER for new app
+                if (!appUsageTimes.containsKey(packageName)) {
+                    appUsageTimes.put(packageName, 0L);
+                }
+
+                lastCheckTime = SystemClock.elapsedRealtime();
+
+                Log.d(TAG, "Switched to: " + packageName);
             }
         }
 
@@ -304,6 +312,13 @@ public class AppMonitoringService extends Service {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         restrictedApps = new HashSet<>(prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>()));
         timeLimit = prefs.getInt(KEY_TIME_LIMIT, DEFAULT_TIME_LIMIT);
+
+        if (!restrictedApps.isEmpty()) {
+            startForeground(NOTIFICATION_ID, createNotification());
+        }
+
+        Log.d(TAG, "Restricted apps count: " + restrictedApps.size());
+        Log.d(TAG, "Time limit: " + timeLimit);
     }
 
     private void showBlockingOverlay(String packageName) {
@@ -430,35 +445,6 @@ public class AppMonitoringService extends Service {
         // Don't recreate the overlay here - it's expensive
     }
 
-    private String getCurrentForegroundApp() {
-        try {
-            long endTime = System.currentTimeMillis();
-            long beginTime = endTime - 2000; // Increased time window
-
-            UsageEvents usageEvents = usageStatsManager.queryEvents(beginTime, endTime);
-            if (usageEvents == null) {
-                Log.w(TAG, "No usage events available");
-                return lastForegroundApp;
-            }
-
-            UsageEvents.Event event = new UsageEvents.Event();
-            String currentApp = lastForegroundApp;
-
-            while (usageEvents.hasNextEvent()) {
-                usageEvents.getNextEvent(event);
-                if (event.getEventType() == UsageEvents.Event.MOVE_TO_FOREGROUND) {
-                    currentApp = event.getPackageName();
-                    Log.d(TAG, "Detected foreground app change: " + currentApp);
-                }
-            }
-
-            lastForegroundApp = currentApp;
-            return currentApp;
-        } catch (Exception e) {
-            Log.e(TAG, "Error getting foreground app", e);
-            return lastForegroundApp;
-        }
-    }
 
     public static class ServiceRestartReceiver extends BroadcastReceiver {
         @Override
