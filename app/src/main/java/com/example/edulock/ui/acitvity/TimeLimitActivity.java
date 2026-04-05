@@ -334,15 +334,26 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void saveRestrictions() {
-        Set<String> restrictedApps = new HashSet<>(selectedApps);
+        SharedPreferences.Editor editor = preferences.edit(); // ✅ FIX
 
-        SharedPreferences.Editor editor = preferences.edit();
+        Set<String> restrictedApps = new HashSet<>();
+        restrictedApps.addAll(selectedApps); // FORCE COPY
+
+        Log.d("TimeLimitActivity", "Saving apps: " + selectedApps.size());
+
+        editor.remove(KEY_RESTRICTED_APPS); // VERY IMPORTANT
         editor.putStringSet(KEY_RESTRICTED_APPS, restrictedApps);
-        editor.putInt(KEY_TIME_LIMIT, selectedTimeLimit);
-        editor.commit();
+        editor.putInt(KEY_TIME_LIMIT, selectedTimeLimit); // ✅ ALSO SAVE TIME
+        editor.commit(); // force save
 
+        // 🔥 Verify saved data
+        Set<String> test = preferences.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
+        Log.d("TimeLimitActivity", "Saved apps check: " + test.size());
+
+        // 🔥 Notify service
         Intent updateIntent = new Intent(this, AppMonitoringService.class);
         updateIntent.setAction("UPDATE_RESTRICTIONS");
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(updateIntent);
         } else {
