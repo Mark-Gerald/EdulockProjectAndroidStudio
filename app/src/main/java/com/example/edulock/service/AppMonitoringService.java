@@ -257,6 +257,14 @@ public class AppMonitoringService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        if (intent != null && "APP_SWITCHED".equals(intent.getAction())) {
+            String packageName = intent.getStringExtra("package_name");
+            if (packageName != null) {
+                lastForegroundApp = packageName;
+                Log.d(TAG, "Foreground app updated from Accessibility: " + packageName);
+            }
+        }
+
         if (intent != null && "UPDATE_RESTRICTIONS".equals(intent.getAction())) {
             updateRestrictions();
         }

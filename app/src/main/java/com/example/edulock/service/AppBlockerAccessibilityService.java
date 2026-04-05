@@ -42,7 +42,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             String newApp = event.getPackageName().toString();
 
-            currentForegroundApp = newApp;
+            if (newApp != null && !newApp.equals(currentForegroundApp)) {
+                currentForegroundApp = newApp;
+                notifyAppChanged(currentForegroundApp);
+            }
         }
     }
 
@@ -66,6 +69,18 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
+        }
+    }
+
+    private void notifyAppChanged(String packageName) {
+        Intent intent = new Intent(this, AppMonitoringService.class);
+        intent.setAction("APP_SWITCHED");
+        intent.putExtra("package_name", packageName);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
         }
     }
 
