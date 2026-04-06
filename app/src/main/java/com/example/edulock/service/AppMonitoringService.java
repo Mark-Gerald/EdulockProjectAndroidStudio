@@ -238,18 +238,19 @@ public class AppMonitoringService extends Service {
     }
 
     public void updateRestrictions() {
-        // Load on background thread to avoid UI stutter
-        scheduler.execute(() -> {
-            loadRestrictions();
-            // Clean up tracking for apps no longer restricted
-            for (String app : new HashSet<>(appUsageTimes.keySet())) {
-                if (!restrictedApps.contains(app)) {
-                    appUsageTimes.remove(app);
-                }
-            }
-            // Update notification on main thread
-            mainHandler.post(this::updateForegroundNotification);
-        });
+        Log.d(TAG, "🔥 updateRestrictions CALLED");
+
+        loadRestrictions();
+
+        Log.d(TAG, "Restricted apps count: " + restrictedApps.size());
+        Log.d(TAG, "Time limit: " + timeLimit);
+
+        // 🔥 RESET EVERYTHING IMMEDIATELY
+        appUsageTimes.clear();
+        lastCheckTime = 0;
+
+        // 🔥 FORCE notification update NOW
+        mainHandler.post(this::updateForegroundNotification);
     }
 
     @SuppressLint({"ForegroundServiceType", "MissingPermission"})
