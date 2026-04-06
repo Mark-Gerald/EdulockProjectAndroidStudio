@@ -1,6 +1,6 @@
 package com.example.edulock.ui.acitvity;
 
-import android.os.Build;
+import android.graphics.Color;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.app.AlertDialog;
@@ -12,11 +12,13 @@ import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,7 +50,6 @@ public class TimeLimitActivity extends AppCompatActivity {
     private LinearLayout appsContainer;
     private SearchView searchView;
     private SharedPreferences preferences;
-    private TextView selectedTimeView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,64 +109,113 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void setupTimeSelection() {
-        TextView[] timeViews = {
-                findViewById(R.id.time_1),
-                findViewById(R.id.time_5),
-                findViewById(R.id.time_10),
-                findViewById(R.id.time_15),
-                findViewById(R.id.time_20),
-                findViewById(R.id.time_25),
-                findViewById(R.id.time_30),
-                findViewById(R.id.time_35)
-        };
-        int[] timeValues = {1, 5, 10, 15, 20, 25, 30, 35};
+        // Remove old TextViews setup - we'll use a custom picker now
+        setupCustomTimePicker();
+    }
 
-        selectedTimeView = timeViews[0];
-        selectedTimeLimit = timeValues[0];
-        selectedTimeView.setBackgroundResource(R.drawable.selected_time_background);
+    private void setupCustomTimePicker() {
+        // Create a linear layout to hold hour, minute, second pickers
+        LinearLayout timePickerContainer = findViewById(R.id.time_picker_container);
 
-        for (int i = 0; i < timeViews.length; i++) {
-            final int timeValue = timeValues[i];
-            timeViews[i].setOnClickListener(v -> {
-                updateTimeSelection((TextView) v);
-                selectedTimeLimit = timeValue;
-                Log.d(TAG, "Selected time limit: " + selectedTimeLimit + " minutes");
+        if (timePickerContainer != null) {
+            timePickerContainer.removeAllViews();
+
+            // Hours NumberPicker
+            NumberPicker hourPicker = new NumberPicker(this);
+            hourPicker.setMinValue(0);
+            hourPicker.setMaxValue(23);
+            hourPicker.setValue(0);
+            hourPicker.setWrapSelectorWheel(true);
+
+            // Minutes NumberPicker
+            NumberPicker minutePicker = new NumberPicker(this);
+            minutePicker.setMinValue(0);
+            minutePicker.setMaxValue(59);
+            minutePicker.setValue(0);
+            minutePicker.setWrapSelectorWheel(true);
+
+            // Seconds NumberPicker
+            NumberPicker secondPicker = new NumberPicker(this);
+            secondPicker.setMinValue(0);
+            secondPicker.setMaxValue(59);
+            secondPicker.setValue(0);
+            secondPicker.setWrapSelectorWheel(true);
+
+            // Container for pickers
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.weight = 1;
+
+            // Add listeners to update selectedTimeLimit
+            hourPicker.setOnValueChangedListener((picker, oldVal, newVal) -> {
+                updateSelectedTimeFromPicker(hourPicker, minutePicker, secondPicker);
             });
+
+            minutePicker.setOnValueChangedListener((picker, oldVal, newVal) -> {
+                updateSelectedTimeFromPicker(hourPicker, minutePicker, secondPicker);
+            });
+
+            secondPicker.setOnValueChangedListener((picker, oldVal, newVal) -> {
+                updateSelectedTimeFromPicker(hourPicker, minutePicker, secondPicker);
+            });
+
+            timePickerContainer.addView(hourPicker, params);
+
+            // Add separators (colons)
+            TextView colon1 = new TextView(this);
+            colon1.setText(":");
+            colon1.setTextColor(Color.WHITE);
+            colon1.setTextSize(24);
+            colon1.setGravity(Gravity.CENTER);
+            colon1.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            ));
+            timePickerContainer.addView(colon1);
+
+            timePickerContainer.addView(minutePicker, params);
+
+            TextView colon2 = new TextView(this);
+            colon2.setText(":");
+            colon2.setTextColor(Color.WHITE);
+            colon2.setTextSize(24);
+            colon2.setGravity(Gravity.CENTER);
+            colon2.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            ));
+            timePickerContainer.addView(colon2);
+
+            timePickerContainer.addView(secondPicker, params);
         }
     }
 
-    private void updateTimeSelection(TextView newSelectedView) {
-        if (selectedTimeView != null) {
-            selectedTimeView.setBackgroundResource(R.drawable.time_option_background);
-        }
-        newSelectedView.setBackgroundResource(R.drawable.selected_time_background);
-        selectedTimeView = newSelectedView;
+    private void updateSelectedTimeFromPicker(NumberPicker hours, NumberPicker minutes, NumberPicker seconds) {
+        int totalSeconds = (hours.getValue() * 3600) + (minutes.getValue() * 60) + seconds.getValue();
+        // If total is 0, default to 1 minute
+        selectedTimeLimit = (totalSeconds == 0) ? 1 : totalSeconds / 60;
+        Log.d(TAG, "Selected time: " + hours.getValue() + ":" +
+                String.format("%02d", minutes.getValue()) + ":" +
+                String.format("%02d", seconds.getValue()) + " = " + selectedTimeLimit + " minutes");
     }
 
     private void loadSavedSettings() {
         int savedTimeLimit = preferences.getInt(KEY_TIME_LIMIT, 1);
-        selectTimeLimitView(savedTimeLimit);
-    }
+        // Convert minutes back to HH:MM:SS format
+        int hours = savedTimeLimit / 60;
+        int minutes = savedTimeLimit % 60;
 
-    private void selectTimeLimitView(int timeLimit) {
-        TextView[] timeViews = {
-                findViewById(R.id.time_1),
-                findViewById(R.id.time_5),
-                findViewById(R.id.time_10),
-                findViewById(R.id.time_15),
-                findViewById(R.id.time_20),
-                findViewById(R.id.time_25),
-                findViewById(R.id.time_30),
-                findViewById(R.id.time_35)
-        };
-        int[] timeValues = {1, 5, 10, 15, 20, 25, 30, 35};
+        LinearLayout container = findViewById(R.id.time_picker_container);
+        if (container != null && container.getChildCount() >= 3) {
+            NumberPicker hourPicker = (NumberPicker) container.getChildAt(0);
+            NumberPicker minutePicker = (NumberPicker) container.getChildAt(2);
+            NumberPicker secondPicker = (NumberPicker) container.getChildAt(4);
 
-        for (int i = 0; i < timeValues.length; i++) {
-            if (timeValues[i] == timeLimit) {
-                updateTimeSelection(timeViews[i]);
-                selectedTimeLimit = timeLimit;
-                break;
-            }
+            hourPicker.setValue(hours);
+            minutePicker.setValue(minutes);
+            secondPicker.setValue(0);
         }
     }
 
@@ -342,32 +392,27 @@ public class TimeLimitActivity extends AppCompatActivity {
 
     private void saveRestrictions() {
         Log.d("SAVE_DEBUG", "selectedApps BEFORE SAVE: " + selectedApps);
-        SharedPreferences.Editor editor = preferences.edit(); // ✅ FIX
+        SharedPreferences.Editor editor = preferences.edit();
 
         Set<String> restrictedApps = new HashSet<>();
-        restrictedApps.addAll(selectedApps); // FORCE COPY
+        restrictedApps.addAll(selectedApps);
 
         Log.d("TimeLimitActivity", "Saving apps: " + selectedApps.size());
 
-        editor.remove(KEY_RESTRICTED_APPS); // VERY IMPORTANT
+        editor.remove(KEY_RESTRICTED_APPS);
         editor.putStringSet(KEY_RESTRICTED_APPS, restrictedApps);
-        editor.putInt(KEY_TIME_LIMIT, selectedTimeLimit); // ✅ ALSO SAVE TIME
-        editor.commit(); // force save
+        editor.putInt(KEY_TIME_LIMIT, selectedTimeLimit);
+        editor.commit();
 
         // 🔥 Verify saved data
         Set<String> test = preferences.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
         Log.d("SAVE_DEBUG", "AFTER SAVE: " + test);
         Log.d("TimeLimitActivity", "Saved apps check: " + test.size());
 
-        Intent stopIntent = new Intent(this, AppMonitoringService.class);
-        stopService(stopIntent); // 🔥 STOP OLD SERVICE
-
-        Intent startIntent = new Intent(this, AppMonitoringService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(startIntent);
-        } else {
-            startService(startIntent);
-        }
+        // 🔥 SEND BROADCAST TO UPDATE SERVICE IMMEDIATELY
+        Intent updateIntent = new Intent(this, AppMonitoringService.class);
+        updateIntent.setAction("UPDATE_RESTRICTIONS");
+        startService(updateIntent);
 
         Toast.makeText(this, "Restrictions updated successfully", Toast.LENGTH_SHORT).show();
         finish();

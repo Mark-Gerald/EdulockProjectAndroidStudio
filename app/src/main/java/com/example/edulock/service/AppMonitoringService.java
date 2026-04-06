@@ -323,10 +323,10 @@ public class AppMonitoringService extends Service {
     }
 
     private void showBlockingOverlay(String packageName) {
-
         mainHandler.postDelayed(() -> {
             try {
                 Intent overlayIntent = new Intent(this, OverlayBlockedActivity.class);
+                overlayIntent.putExtra("package_name", packageName);  // ✅ ADD THIS LINE
                 overlayIntent.addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK |
                                 Intent.FLAG_ACTIVITY_CLEAR_TOP |

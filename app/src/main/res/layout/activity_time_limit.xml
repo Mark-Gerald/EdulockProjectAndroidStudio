@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:background="#1E1E2E">
 
-    <!-- Header section remains the same -->
+    <!-- Header section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -49,7 +49,8 @@
                 android:layout_height="wrap_content"
                 android:text="Note: When you open a specific app, EduLock will ask you to set a time limit for using it before access is restricted."
                 android:textColor="#FFFFFF"
-                android:layout_marginBottom="24dp"/>
+                android:layout_marginBottom="24dp"
+                android:contentDescription="Note"/>
 
             <!-- Time Limit Section -->
             <TextView
@@ -59,120 +60,21 @@
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:contentDescription="Set a Time Limit"/>
 
-            <!-- Time options container -->
+            <!-- Time Picker Container -->
             <LinearLayout
+                android:id="@+id/time_picker_container"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:layout_height="200dp"
+                android:orientation="horizontal"
                 android:background="@drawable/rounded_dark_background"
                 android:padding="16dp"
-                android:layout_marginBottom="24dp">
-
-                <TextView
-                    android:id="@+id/time_1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="1 minutes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:padding="10dp"
-                    android:background="@drawable/selected_time_background"
-                    android:textAlignment="center"
-                    android:fontFamily="@font/trends"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/time_5"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="5 minutes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:padding="10dp"
-                    android:background="@drawable/time_option_background"
-                    android:textAlignment="center"
-                    android:fontFamily="@font/trends"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/time_10"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="10 minutes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:padding="10dp"
-                    android:textAlignment="center"
-                    android:fontFamily="@font/trends"
-                    android:background="@drawable/time_option_background"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/time_15"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="15 minutes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:padding="10dp"
-                    android:fontFamily="@font/trends"
-                    android:textAlignment="center"
-                    android:background="@drawable/time_option_background"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/time_20"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="20 minutes"
-                    android:textColor="#FFFFFF"
-                    android:fontFamily="@font/trends"
-                    android:textSize="16sp"
-                    android:padding="10dp"
-                    android:textAlignment="center"
-                    android:background="@drawable/time_option_background"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/time_25"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/trends"
-                    android:text="25 minutes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:padding="10dp"
-                    android:textAlignment="center"
-                    android:background="@drawable/time_option_background"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/time_30"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/trends"
-                    android:text="30 minutes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:padding="10dp"
-                    android:textAlignment="center"
-                    android:background="@drawable/time_option_background"
-                    android:layout_marginBottom="8dp"/>
-
-                <TextView
-                    android:id="@+id/time_35"
-                    android:layout_width="match_parent"
-                    android:fontFamily="@font/trends"
-                    android:layout_height="wrap_content"
-                    android:text="35 minutes"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textAlignment="center"
-                    android:padding="10dp"
-                    android:background="@drawable/time_option_background"/>
-
+                android:gravity="center"
+                android:layout_marginBottom="24dp"
+                android:contentDescription="Time Picker">
+                <!-- NumberPickers will be added here programmatically -->
             </LinearLayout>
 
             <!-- App Selection Section -->
@@ -183,7 +85,8 @@
                 android:textColor="#FFFFFF"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:contentDescription="Select Apps"/>
 
             <SearchView
                 android:id="@+id/search_app"
@@ -192,14 +95,16 @@
                 android:queryHint="Search App"
                 android:iconifiedByDefault="false"
                 android:background="@drawable/rounded_dark_background"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="16dp"
+                android:contentDescription="Search App"/>
 
             <!-- Apps List Container -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/rounded_dark_background">
+                android:background="@drawable/rounded_dark_background"
+                android:contentDescription="Apps List">
 
                 <!-- Select All Option -->
                 <LinearLayout
@@ -216,14 +121,8 @@
                         android:text="Select All"
                         android:textColor="#FFFFFF"
                         android:textSize="16sp"
-                        android:buttonTint="#FFFFFF"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Select All"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"/>
+                        android:buttonTint="#FFFFFF"
+                        android:contentDescription="Select All Checkbox"/>
                 </LinearLayout>
 
                 <!-- Apps Container -->
@@ -232,7 +131,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="8dp">
+                    android:padding="8dp"
+                    android:contentDescription="Apps Container">
                     <!-- App items will be added here programmatically -->
                 </LinearLayout>
 
@@ -259,7 +159,8 @@
             android:textAllCaps="true"
             android:layout_marginEnd="8dp"
             android:background="@drawable/cancel_button_background"
-            android:padding="12dp"/>
+            android:padding="12dp"
+            android:contentDescription="Cancel Button"/>
 
         <Button
             android:id="@+id/save_button"
@@ -270,7 +171,8 @@
             android:textColor="#FFFFFF"
             android:textAllCaps="true"
             android:background="@drawable/save_button_background"
-            android:padding="12dp"/>
+            android:padding="12dp"
+            android:contentDescription="Save Button"/>
     </LinearLayout>
 
 </LinearLayout>
