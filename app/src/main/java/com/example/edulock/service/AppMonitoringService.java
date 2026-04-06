@@ -119,6 +119,7 @@ public class AppMonitoringService extends Service {
                 appUsageTimes.put(packageName, newUsage);
 
                 // Check if time limit exceeded
+                Log.d(TAG, "Usage: " + newUsage + " seconds");
                 if (newUsage >= timeLimit * 60) {
                     if (isOverlayShowing.compareAndSet(false, true)) {
                         mainHandler.post(() -> {
@@ -339,6 +340,8 @@ public class AppMonitoringService extends Service {
                 }
             }, OVERLAY_SHOW_DELAY_MS);
         }
+
+        Log.d(TAG, "🔥 LOADED APPS: " + restrictedApps);
     }
 
     private void scheduleMidnightReset() {

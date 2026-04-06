@@ -355,14 +355,14 @@ public class TimeLimitActivity extends AppCompatActivity {
         Set<String> test = preferences.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
         Log.d("TimeLimitActivity", "Saved apps check: " + test.size());
 
-        // 🔥 Notify service
-        Intent updateIntent = new Intent(this, AppMonitoringService.class);
-        updateIntent.setAction("UPDATE_RESTRICTIONS");
+        Intent stopIntent = new Intent(this, AppMonitoringService.class);
+        stopService(stopIntent); // 🔥 STOP OLD SERVICE
 
+        Intent startIntent = new Intent(this, AppMonitoringService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(updateIntent);
+            startForegroundService(startIntent);
         } else {
-            startService(updateIntent);
+            startService(startIntent);
         }
 
         Toast.makeText(this, "Restrictions updated successfully", Toast.LENGTH_SHORT).show();
