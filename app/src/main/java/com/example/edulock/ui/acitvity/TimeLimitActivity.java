@@ -274,19 +274,21 @@ public class TimeLimitActivity extends AppCompatActivity {
             appIconView.setImageDrawable(app.getAppIcon());
             appCheckBox.setChecked(selectedApps.contains(app.getPackageName()));
 
-            appCheckBox.setOnCheckedChangeListener(null); // 🔥 IMPORTANT (prevents auto-trigger bug)
+            appCheckBox.setOnCheckedChangeListener(null);
 
             appCheckBox.setChecked(selectedApps.contains(app.getPackageName()));
 
             appCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+
                 if (isChecked) {
                     selectedApps.add(app.getPackageName());
+                    Log.d("CHECKBOX", "ADDED: " + app.getPackageName());
                 } else {
                     selectedApps.remove(app.getPackageName());
+                    Log.d("CHECKBOX", "REMOVED: " + app.getPackageName());
                 }
 
-                Log.d("TimeLimitActivity", "Selected apps now: " + selectedApps.size()); // 🔍 DEBUG
-                updateSelectAllCheckboxState();
+                Log.d("CHECKBOX", "TOTAL: " + selectedApps.size());
             });
 
             appsContainer.addView(appView);
@@ -339,6 +341,7 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void saveRestrictions() {
+        Log.d("SAVE_DEBUG", "selectedApps BEFORE SAVE: " + selectedApps);
         SharedPreferences.Editor editor = preferences.edit(); // ✅ FIX
 
         Set<String> restrictedApps = new HashSet<>();
@@ -353,6 +356,7 @@ public class TimeLimitActivity extends AppCompatActivity {
 
         // 🔥 Verify saved data
         Set<String> test = preferences.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
+        Log.d("SAVE_DEBUG", "AFTER SAVE: " + test);
         Log.d("TimeLimitActivity", "Saved apps check: " + test.size());
 
         Intent stopIntent = new Intent(this, AppMonitoringService.class);

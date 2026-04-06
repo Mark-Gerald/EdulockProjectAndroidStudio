@@ -312,15 +312,12 @@ public class AppMonitoringService extends Service {
 
     private void loadRestrictions() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
         restrictedApps = new HashSet<>(prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>()));
-        timeLimit = prefs.getInt(KEY_TIME_LIMIT, DEFAULT_TIME_LIMIT);
+        timeLimit = prefs.getInt(KEY_TIME_LIMIT, 1);
 
-        if (!restrictedApps.isEmpty()) {
-            startForeground(NOTIFICATION_ID, createNotification());
-        }
-
-        Log.d(TAG, "Restricted apps count: " + restrictedApps.size());
-        Log.d(TAG, "Time limit: " + timeLimit);
+        Log.d("SERVICE_DEBUG", "LOADED APPS: " + restrictedApps);
+        Log.d("SERVICE_DEBUG", "COUNT: " + restrictedApps.size());
     }
 
     private void showBlockingOverlay(String packageName) {
