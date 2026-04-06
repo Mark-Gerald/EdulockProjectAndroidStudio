@@ -271,6 +271,8 @@ public class AppMonitoringService extends Service {
 
                 lastCheckTime = SystemClock.elapsedRealtime();
 
+                updateForegroundNotification();
+
                 Log.d(TAG, "Switched to: " + packageName);
             }
         }
@@ -321,24 +323,22 @@ public class AppMonitoringService extends Service {
     }
 
     private void showBlockingOverlay(String packageName) {
-        if (isOverlayShowing.compareAndSet(false, true)) {
-            // Delay overlay show to prevent UI thread overload
-            mainHandler.postDelayed(() -> {
-                try {
-                    Intent overlayIntent = new Intent(this, OverlayBlockedActivity.class);
-                    overlayIntent.addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK |
-                                    Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                                    Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                    startActivity(overlayIntent);
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to show overlay: " + e.getMessage());
-                    isOverlayShowing.set(false);
-                }
-            }, OVERLAY_SHOW_DELAY_MS);
-        }
 
-        Log.d(TAG, "🔥 LOADED APPS: " + restrictedApps);
+        mainHandler.postDelayed(() -> {
+            try {
+                Intent overlayIntent = new Intent(this, OverlayBlockedActivity.class);
+                overlayIntent.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK |
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                startActivity(overlayIntent);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to show overlay: " + e.getMessage());
+                isOverlayShowing.set(false);
+            }
+        }, OVERLAY_SHOW_DELAY_MS);
+
+        Log.d(TAG, "🔥 OVERLAY TRIGGERED for: " + packageName);
     }
 
     private void scheduleMidnightReset() {

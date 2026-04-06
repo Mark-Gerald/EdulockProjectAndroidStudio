@@ -40,6 +40,9 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+
+            loadRestrictions(); // 🔥 ALWAYS REFRESH HERE
+
             String newApp = event.getPackageName().toString();
 
             if (newApp != null && !newApp.equals(currentForegroundApp)) {
@@ -94,5 +97,10 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
         Log.d(TAG, "AppBlockerAccessibilityService destroyed");
+    }
+
+    public void reloadRestrictions() {
+        loadRestrictions();
+        Log.d(TAG, "🔥 Accessibility reloaded restrictions: " + restrictedApps.size());
     }
 }
