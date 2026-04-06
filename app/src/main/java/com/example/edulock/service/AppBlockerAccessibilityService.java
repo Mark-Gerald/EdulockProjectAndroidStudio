@@ -17,7 +17,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     private static final String TAG = "AppBlockerAccessibility";
     private static final String PREFS_NAME = "app_restrictions";
     private static final String KEY_RESTRICTED_APPS = "restricted_apps";
-    private static final String KEY_TIME_LIMIT = "time_limit";
+    private static final String KEY_TIME_LIMIT = "selected_time_limit";
 
     private Set<String> restrictedApps = new HashSet<>();
     private String currentForegroundApp = "";
