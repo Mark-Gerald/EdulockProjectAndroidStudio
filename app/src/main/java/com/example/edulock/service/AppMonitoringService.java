@@ -1,24 +1,17 @@
 package com.example.edulock.service;
 
 import android.annotation.SuppressLint;
-import android.app.AlarmManager;
-import android.app.AppOpsManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.SystemClock;
-import android.provider.Settings;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -28,43 +21,27 @@ import com.example.edulock.manager.OverlayManager;
 import com.example.edulock.manager.RestrictionManager;
 import com.example.edulock.ui.acitvity.MainActivity;
 
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Core service for monitoring app usage and blocking restricted apps
- *
- * Architecture:
- * - Uses RestrictionManager for all data/logic
- * - Uses OverlayManager for blocking display
- * - Tracks active app via ForegroundAppMonitor
- * - Updates notification in real-time
- * - Resets usage daily at midnight
+ * Monitoring service that:
+ * 1. Receives app switch events from AccessibilityService
+ * 2. Checks if app is restricted
+ * 3. Checks if time limit exceeded TODAY
+ * 4. Blocks app if needed
+ * 5. Tracks usage time
  */
 public class AppMonitoringService extends Service {
     private static final String TAG = "AppMonitoringService";
     private static final int NOTIFICATION_ID = 123;
     private static final String CHANNEL_ID = "EduLockChannel";
-    private static final long CHECK_INTERVAL_SECONDS = 1;
 
     private RestrictionManager restrictionManager;
     private OverlayManager overlayManager;
-    private ForegroundAppMonitor foregroundMonitor;
-
-    private ScheduledExecutorService scheduler;
     private Handler mainHandler;
 
-    // Track current session time for each app
-    private Map<String, Long> currentSessionStart = new HashMap<>();
-    private Map<String, Long> sessionUsageTime = new HashMap<>();
-
-    private AtomicBoolean isMonitoring = new AtomicBoolean(false);
+    private String lastBlockedApp = "";
+    private AtomicBoolean isBlockingActive = new AtomicBoolean(false);
 
     @Override
     public void onCreate() {
@@ -76,7 +53,6 @@ public class AppMonitoringService extends Service {
         // Initialize managers
         restrictionManager = new RestrictionManager(this);
         overlayManager = new OverlayManager(this);
-        foregroundMonitor = new ForegroundAppMonitor(this);
 
         // Create notification channel
         createNotificationChannel();
@@ -84,138 +60,108 @@ public class AppMonitoringService extends Service {
         // Start with initial notification
         startForeground(NOTIFICATION_ID, createNotification());
 
-        // Verify permissions
-        verifyPermissions();
-
-        // Start monitoring
-        startMonitoring();
-
-        // Register for screen on/off to pause/resume monitoring
-        registerScreenStateReceiver();
-
         Log.d(TAG, "✅ Service initialized");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand called");
-
-        if (intent != null) {
-            String action = intent.getAction();
-
-            if ("UPDATE_RESTRICTIONS".equals(action)) {
-                Log.d(TAG, "🔄 Received UPDATE_RESTRICTIONS");
-                handleRestrictionsUpdate();
-            } else if ("CHECK_USAGE".equals(action)) {
-                checkAndUpdateNotification();
-            }
+        if (intent == null) {
+            return START_STICKY;
         }
 
-        // Ensure notification is always up to date
-        updateNotification();
+        String action = intent.getAction();
+
+        if ("APP_SWITCHED".equals(action)) {
+            // App was switched - check if we should block it
+            String packageName = intent.getStringExtra("package_name");
+            handleAppSwitch(packageName);
+        }
+        else if ("UPDATE_RESTRICTIONS".equals(action)) {
+            // User saved new restrictions
+            Log.d(TAG, "🔄 Restrictions updated");
+            restrictionManager = new RestrictionManager(this);
+            updateNotification();
+        }
 
         return START_STICKY;
     }
 
     /**
-     * Handle when user saves new restrictions
+     * Handle when an app comes to foreground
      */
-    private void handleRestrictionsUpdate() {
-        // Reload restrictions from SharedPreferences
-        restrictionManager = new RestrictionManager(this);
+    private void handleAppSwitch(String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return;
+        }
 
-        // Clear all session tracking to start fresh
-        currentSessionStart.clear();
-        sessionUsageTime.clear();
+        Log.d(TAG, "📱 App switched: " + packageName);
 
-        Log.d(TAG, "✅ Restrictions reloaded and sessions reset");
+        // Check if this app is restricted
+        if (!restrictionManager.isAppRestricted(packageName)) {
+            Log.d(TAG, "✅ App not restricted: " + packageName);
+            return;
+        }
+
+        Log.d(TAG, "🚨 App IS RESTRICTED: " + packageName);
+
+        // Check if time limit exceeded TODAY
+        if (restrictionManager.isTimeExceeded(packageName)) {
+            Log.d(TAG, "⏰ TIME LIMIT EXCEEDED for: " + packageName);
+
+            // Show overlay to block this app
+            blockApp(packageName);
+        } else {
+            // Time not exceeded yet - show how much time used
+            long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
+            int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
+
+            Log.d(TAG, "⏱️  " + packageName + ": Used " + usedSeconds + "s of " + limitSeconds + "s");
+
+            // Start tracking this session
+            startTrackingUsage(packageName);
+        }
+
         updateNotification();
     }
 
     /**
-     * Start the monitoring loop
+     * Block the app by showing overlay
      */
-    private void startMonitoring() {
-        if (isMonitoring.getAndSet(true)) {
-            return; // Already running
+    private void blockApp(String packageName) {
+        if (packageName.equals(lastBlockedApp) && isBlockingActive.get()) {
+            Log.d(TAG, "⏭️  Already blocking this app");
+            return;
         }
 
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "AppMonitoring");
-            t.setDaemon(true);
-            return t;
-        });
+        lastBlockedApp = packageName;
+        isBlockingActive.set(true);
 
-        scheduler.scheduleAtFixedRate(
-                this::monitorAppUsage,
-                0,
-                CHECK_INTERVAL_SECONDS,
-                TimeUnit.SECONDS
-        );
+        Log.d(TAG, "🛑 BLOCKING APP: " + packageName);
 
-        Log.d(TAG, "✅ Monitoring started");
+        // Show overlay using the same mechanism as teacher control
+        overlayManager.showBlockingOverlay(packageName);
     }
 
     /**
-     * Main monitoring loop - called every second
+     * Track usage time for an app session
+     * This runs while the app is in foreground
      */
-    private void monitorAppUsage() {
-        try {
-            String currentApp = foregroundMonitor.getCurrentForegroundApp();
+    private void startTrackingUsage(String packageName) {
+        new Thread(() -> {
+            try {
+                // Track usage every second while app is in foreground
+                // This will be called each time the app comes to foreground
+                restrictionManager.addUsageTime(packageName, 1);
 
-            if (currentApp == null || currentApp.isEmpty()) {
-                return;
+                Log.d(TAG, "⏱️  Tracking usage for: " + packageName);
+            } catch (Exception e) {
+                Log.e(TAG, "Error tracking usage: " + e.getMessage());
             }
-
-            // Check if this app is restricted
-            if (!restrictionManager.isAppRestricted(currentApp)) {
-                // App not restricted - clear its session
-                currentSessionStart.remove(currentApp);
-                sessionUsageTime.remove(currentApp);
-                return;
-            }
-
-            // App is restricted - track its session
-            long now = SystemClock.elapsedRealtime();
-
-            if (!currentSessionStart.containsKey(currentApp)) {
-                // New session started
-                currentSessionStart.put(currentApp, now);
-                sessionUsageTime.put(currentApp, 0L);
-                Log.d(TAG, "▶️  Session started: " + currentApp);
-                return;
-            }
-
-            // Update session elapsed time
-            long sessionStart = currentSessionStart.get(currentApp);
-            long elapsedSeconds = (now - sessionStart) / 1000;
-            sessionUsageTime.put(currentApp, elapsedSeconds);
-
-            // Add to daily usage (in 1-second increments)
-            restrictionManager.addUsageTime(currentApp, 1);
-
-            long totalDailyUsage = restrictionManager.getTodayUsageSeconds(currentApp);
-            int timeLimitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
-
-            Log.d(TAG, "⏱️  " + currentApp + ": Session=" + elapsedSeconds + "s, Daily=" + totalDailyUsage + "s, Limit=" + timeLimitSeconds + "s");
-
-            // Check if time exceeded
-            if (restrictionManager.isTimeExceeded(currentApp)) {
-                Log.d(TAG, "🚨 TIME LIMIT EXCEEDED: " + currentApp);
-                overlayManager.showBlockingOverlay(currentApp);
-
-                // Clear session so it doesn't keep showing overlay
-                currentSessionStart.remove(currentApp);
-                sessionUsageTime.remove(currentApp);
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Error in monitoring loop: " + e.getMessage(), e);
-        }
+        }).start();
     }
 
     /**
-     * Update notification with current status
+     * Update notification with current restrictions status
      */
     private void updateNotification() {
         mainHandler.post(() -> {
@@ -223,7 +169,6 @@ public class AppMonitoringService extends Service {
                 NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (manager != null) {
                     manager.notify(NOTIFICATION_ID, createNotification());
-                    Log.d(TAG, "📢 Notification updated");
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error updating notification: " + e.getMessage());
@@ -240,8 +185,7 @@ public class AppMonitoringService extends Service {
                 this, 0, notificationIntent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Set<String> restrictedApps = restrictionManager.getRestrictedApps();
-        int appCount = restrictedApps.size();
+        int appCount = restrictionManager.getRestrictedApps().size();
         int timeLimit = restrictionManager.getTimeLimitMinutes();
 
         String contentText;
@@ -284,63 +228,6 @@ public class AppMonitoringService extends Service {
         }
     }
 
-    /**
-     * Verify required permissions
-     */
-    private void verifyPermissions() {
-        AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
-        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(), getPackageName());
-
-        if (mode != AppOpsManager.MODE_ALLOWED) {
-            Log.w(TAG, "⚠️  Usage stats permission not granted");
-        }
-
-        if (!Settings.canDrawOverlays(this)) {
-            Log.w(TAG, "⚠️  Overlay permission not granted");
-        }
-    }
-
-    /**
-     * Register receiver for screen on/off to pause/resume monitoring
-     */
-    private void registerScreenStateReceiver() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            IntentFilter filter = new IntentFilter();
-            filter.addAction(Intent.ACTION_SCREEN_ON);
-            filter.addAction(Intent.ACTION_SCREEN_OFF);
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(screenReceiver, filter, Context.RECEIVER_EXPORTED);
-            } else {
-                registerReceiver(screenReceiver, filter);
-            }
-        }
-    }
-
-    /**
-     * Handle screen on/off
-     */
-    private BroadcastReceiver screenReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-                Log.d(TAG, "📵 Screen off - pausing session tracking");
-                currentSessionStart.clear();
-            } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
-                Log.d(TAG, "📱 Screen on - resuming monitoring");
-            }
-        }
-    };
-
-    /**
-     * Check usage and update notification without full reload
-     */
-    private void checkAndUpdateNotification() {
-        updateNotification();
-    }
-
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -349,18 +236,7 @@ public class AppMonitoringService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdownNow();
-        }
-
-        try {
-            unregisterReceiver(screenReceiver);
-        } catch (Exception e) {
-            Log.e(TAG, "Error unregistering receiver: " + e.getMessage());
-        }
-
-        isMonitoring.set(false);
+        isBlockingActive.set(false);
         Log.d(TAG, "🔴 Service destroyed");
     }
 }

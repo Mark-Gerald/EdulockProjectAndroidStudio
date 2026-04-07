@@ -8,64 +8,55 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
-import java.util.HashMap;
+
+import com.example.edulock.manager.RestrictionManager;
+
 import java.util.HashSet;
 import java.util.Set;
-import android.view.View;
 
+/**
+ * Detects when restricted apps are launched
+ * Sends app switch events to AppMonitoringService for time limit checking
+ */
 public class AppBlockerAccessibilityService extends AccessibilityService {
     private static final String TAG = "AppBlockerAccessibility";
-    private static final String PREFS_NAME = "app_restrictions";
-    private static final String KEY_RESTRICTED_APPS = "restricted_apps";
-    private static final String KEY_TIME_LIMIT = "selected_time_limit";
 
-    private Set<String> restrictedApps = new HashSet<>();
     private String currentForegroundApp = "";
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private SharedPreferences preferences;
-    private HashMap<String, Integer> appLimits = new HashMap<>();
-
-    private View overlayView = null;
+    private RestrictionManager restrictionManager;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        loadRestrictions();
+        restrictionManager = new RestrictionManager(this);
         startMonitoringService();
-
-        Log.d(TAG, "AppBlockerAccessibilityService created");
+        Log.d(TAG, "✅ AppBlockerAccessibilityService created");
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        // Only care about window state changes (app switches)
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            return;
+        }
 
-            loadRestrictions(); // 🔥 ALWAYS REFRESH HERE
+        String newApp = event.getPackageName().toString();
 
-            String newApp = event.getPackageName().toString();
+        if (newApp == null || newApp.isEmpty()) {
+            return;
+        }
 
-            if (newApp != null && !newApp.equals(currentForegroundApp)) {
-                currentForegroundApp = newApp;
-                notifyAppChanged(currentForegroundApp);
-            }
+        // If app changed, notify the monitoring service
+        if (!newApp.equals(currentForegroundApp)) {
+            currentForegroundApp = newApp;
+            Log.d(TAG, "📱 App detected: " + newApp);
+            notifyAppChanged(newApp);
         }
     }
 
-    private void loadRestrictions() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        restrictedApps = new HashSet<>(prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>()));
-        Set<String> apps = prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
-        restrictedApps = new HashSet<>(apps);
-
-        int globalLimit = prefs.getInt(KEY_TIME_LIMIT, 1);
-
-        for (String app : restrictedApps) {
-            appLimits.put(app, globalLimit);
-        }
-        Log.d(TAG, "Loaded " + restrictedApps.size() + " apps");
-    }
-
+    /**
+     * Start the monitoring service that will handle time limit checking
+     */
     private void startMonitoringService() {
         Intent serviceIntent = new Intent(this, AppMonitoringService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -73,8 +64,12 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         } else {
             startService(serviceIntent);
         }
+        Log.d(TAG, "✅ Monitoring service started");
     }
 
+    /**
+     * Notify monitoring service of app switch
+     */
     private void notifyAppChanged(String packageName) {
         Intent intent = new Intent(this, AppMonitoringService.class);
         intent.setAction("APP_SWITCHED");
@@ -85,22 +80,19 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
         } else {
             startService(intent);
         }
+
+        Log.d(TAG, "🔔 Notified service of app switch: " + packageName);
     }
 
     @Override
     public void onInterrupt() {
-        Log.d(TAG, "AppBlockerAccessibilityService interrupted");
+        Log.d(TAG, "Service interrupted");
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
-        Log.d(TAG, "AppBlockerAccessibilityService destroyed");
-    }
-
-    public void reloadRestrictions() {
-        loadRestrictions();
-        Log.d(TAG, "🔥 Accessibility reloaded restrictions: " + restrictedApps.size());
+        Log.d(TAG, "🔴 AppBlockerAccessibilityService destroyed");
     }
 }

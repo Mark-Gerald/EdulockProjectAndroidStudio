@@ -466,7 +466,14 @@ public class TimeLimitActivity extends AppCompatActivity {
             Log.e("TimeLimitActivity", "❌ Error starting service: " + e.getMessage());
         }
 
-        Toast.makeText(this, "✅ Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Log.e("TimeLimitActivity", "Sleep interrupted");
+        }
+
         finish();
     }
 
