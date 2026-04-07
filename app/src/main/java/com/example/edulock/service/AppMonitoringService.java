@@ -241,7 +241,7 @@ public class AppMonitoringService extends Service {
     public void updateRestrictions() {
         Log.d(TAG, "🔥 updateRestrictions CALLED");
 
-        loadRestrictions();
+        loadRestrictions();  // ✅ This loads from SharedPreferences
 
         Log.d(TAG, "Restricted apps count: " + restrictedApps.size());
         Log.d(TAG, "Time limit: " + timeLimit);
@@ -278,6 +278,7 @@ public class AppMonitoringService extends Service {
         }
 
         if (intent != null && "UPDATE_RESTRICTIONS".equals(intent.getAction())) {
+            Log.d(TAG, "Received UPDATE_RESTRICTIONS action");
             updateRestrictions();
         }
 
@@ -394,11 +395,15 @@ public class AppMonitoringService extends Service {
         int appCount = restrictedApps.size();
 
         String text;
-        if (appCount == 1) {
+        if (appCount == 0) {
+            text = "No apps being monitored";
+        } else if (appCount == 1) {
             text = "Monitoring 1 app with " + timeLimit + " min limit";
         } else {
             text = "Monitoring " + appCount + " apps with " + timeLimit + " min limit";
         }
+
+        Log.d(TAG, "📢 Notification Updated: " + text + " (appCount=" + appCount + ", timeLimit=" + timeLimit + ")");
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(getString(R.string.edulock_active))
