@@ -414,7 +414,7 @@ public class TimeLimitActivity extends AppCompatActivity {
         int totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
         selectedTimeLimit = (totalSeconds == 0) ? 1 : totalSeconds / 60;  // Convert to minutes
 
-        Log.d("TimeLimitActivity", "Time selected: " + hours + "h " + minutes + "m " + seconds + "s = " + selectedTimeLimit + " minutes");
+        Log.d("TimeLimitActivity", "⏱️ Time selected: " + hours + "h " + minutes + "m " + seconds + "s = " + selectedTimeLimit + " minutes");
 
         // ✅ STEP 3: Save to SharedPreferences
         Log.d("SAVE_DEBUG", "selectedApps BEFORE SAVE: " + selectedApps);
@@ -423,39 +423,38 @@ public class TimeLimitActivity extends AppCompatActivity {
         Set<String> restrictedApps = new HashSet<>();
         restrictedApps.addAll(selectedApps);
 
-        Log.d("TimeLimitActivity", "Saving apps: " + selectedApps.size() + " with time limit: " + selectedTimeLimit + " minutes");
+        Log.d("TimeLimitActivity", "💾 Saving: " + selectedApps.size() + " apps with " + selectedTimeLimit + " minutes time limit");
 
-        editor.remove(KEY_RESTRICTED_APPS);
+        editor.clear();  // ✅ Clear all old data first
         editor.putStringSet(KEY_RESTRICTED_APPS, restrictedApps);
         editor.putInt(KEY_TIME_LIMIT, selectedTimeLimit);
-        editor.apply();  // ✅ Changed from commit() to apply()
+        editor.apply();
+
+        Log.d("TimeLimitActivity", "✅ Data saved to SharedPreferences");
 
         // ✅ Verify saved data
         Set<String> test = preferences.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
         int savedTime = preferences.getInt(KEY_TIME_LIMIT, -1);
-        Log.d("SAVE_DEBUG", "AFTER SAVE - Apps: " + test.size() + ", Time: " + savedTime + " minutes");
+        Log.d("SAVE_DEBUG", "✅ VERIFIED - Apps: " + test.size() + ", Time: " + savedTime + " minutes");
 
-        // ✅ STEP 4: Stop old service and start new one
+        // ✅ STEP 4: Notify the service
         try {
-            Intent stopIntent = new Intent(this, AppMonitoringService.class);
-            stopService(stopIntent);
+            Log.d("TimeLimitActivity", "🚀 Sending UPDATE_RESTRICTIONS to service...");
+            Intent updateIntent = new Intent(this, AppMonitoringService.class);
+            updateIntent.setAction("UPDATE_RESTRICTIONS");
 
-            Thread.sleep(500);  // Wait 500ms before restarting
-
-            Intent startIntent = new Intent(this, AppMonitoringService.class);
-            startIntent.setAction("UPDATE_RESTRICTIONS");
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(startIntent);
+                startForegroundService(updateIntent);
             } else {
-                startService(startIntent);
+                startService(updateIntent);
             }
 
-            Log.d("TimeLimitActivity", "✅ Service restarted with new restrictions");
+            Log.d("TimeLimitActivity", "✅ Service update sent");
         } catch (Exception e) {
-            Log.e("TimeLimitActivity", "Error restarting service: " + e.getMessage());
+            Log.e("TimeLimitActivity", "Error sending update to service: " + e.getMessage());
         }
 
-        Toast.makeText(this, "Restrictions saved: " + selectedApps.size() + " app(s), " + selectedTimeLimit + " min limit", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "✅ Saved: " + selectedApps.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
         finish();
     }
 

@@ -239,25 +239,36 @@ public class AppMonitoringService extends Service {
     }
 
     public void updateRestrictions() {
-        Log.d(TAG, "🔥 updateRestrictions CALLED");
+        Log.d(TAG, "🔥🔥🔥 updateRestrictions CALLED 🔥🔥🔥");
 
-        loadRestrictions();  // ✅ This loads from SharedPreferences
+        // ✅ Load fresh data from SharedPreferences
+        loadRestrictions();
 
-        Log.d(TAG, "Restricted apps count: " + restrictedApps.size());
-        Log.d(TAG, "Time limit: " + timeLimit);
+        Log.d(TAG, "✅ After reload - Restricted apps count: " + restrictedApps.size());
+        Log.d(TAG, "✅ After reload - Time limit: " + timeLimit);
 
-        // 🔥 RESET EVERYTHING IMMEDIATELY
+        // ✅ RESET EVERYTHING IMMEDIATELY
         appUsageTimes.clear();
         lastCheckTime = 0;
+        isOverlayShowing.set(false);
 
-        // 🔥 FORCE notification update NOW
-        mainHandler.post(this::updateForegroundNotification);
+        // ✅ FORCE notification update NOW on main thread
+        mainHandler.post(() -> {
+            try {
+                updateForegroundNotification();
+                Log.d(TAG, "✅ Notification force-updated");
+            } catch (Exception e) {
+                Log.e(TAG, "Error updating notification: " + e.getMessage());
+            }
+        });
     }
 
     @SuppressLint({"ForegroundServiceType", "MissingPermission"})
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand called with startId: " + startId);
 
+        // ✅ STEP 1: Handle APP_SWITCHED action
         if (intent != null && "APP_SWITCHED".equals(intent.getAction())) {
             String packageName = intent.getStringExtra("package_name");
 
@@ -271,30 +282,35 @@ public class AppMonitoringService extends Service {
 
                 lastCheckTime = SystemClock.elapsedRealtime();
 
-                updateForegroundNotification();
-
                 Log.d(TAG, "Switched to: " + packageName);
             }
         }
 
+        // ✅ STEP 2: Handle UPDATE_RESTRICTIONS action - PRIORITY!
         if (intent != null && "UPDATE_RESTRICTIONS".equals(intent.getAction())) {
-            Log.d(TAG, "Received UPDATE_RESTRICTIONS action");
-            updateRestrictions();
+            Log.d(TAG, "🔥 Received UPDATE_RESTRICTIONS action - loading new settings NOW");
+            updateRestrictions();  // This will load and update notification
         }
 
-        Log.d(TAG, "onStartCommand called with startId: " + startId);
+        // ✅ STEP 3: Make sure foreground notification is created
+        try {
+            startForeground(NOTIFICATION_ID, createNotification());
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting foreground: " + e.getMessage(), e);
+        }
 
-        // Ensure foreground is started immediately
-        startForeground(NOTIFICATION_ID, createNotification());
+        // ✅ STEP 4: Update notification with latest data
+        updateForegroundNotification();
 
+        // ✅ STEP 5: Initialize scheduler if needed
         try {
             if (scheduler == null || scheduler.isShutdown()) {
                 scheduler = Executors.newSingleThreadScheduledExecutor();
                 scheduler.scheduleAtFixedRate(monitorTask, 0, CHECK_INTERVAL_SECONDS, TimeUnit.SECONDS);
+                Log.d(TAG, "Scheduler initialized");
             }
-            updateForegroundNotification();
         } catch (Exception e) {
-            Log.e(TAG, "Error in onStartCommand: " + e.getMessage(), e);
+            Log.e(TAG, "Error in scheduler setup: " + e.getMessage(), e);
         }
 
         return START_STICKY;
@@ -316,11 +332,13 @@ public class AppMonitoringService extends Service {
     private void loadRestrictions() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
-        restrictedApps = new HashSet<>(prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>()));
+        Set<String> loadedApps = prefs.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
+        restrictedApps = new HashSet<>(loadedApps);
         timeLimit = prefs.getInt(KEY_TIME_LIMIT, 1);
 
-        Log.d("SERVICE_DEBUG", "LOADED APPS: " + restrictedApps);
-        Log.d("SERVICE_DEBUG", "COUNT: " + restrictedApps.size());
+        Log.d("SERVICE_DEBUG", "✅ LOADED APPS: " + restrictedApps);
+        Log.d("SERVICE_DEBUG", "✅ COUNT: " + restrictedApps.size());
+        Log.d("SERVICE_DEBUG", "✅ TIME LIMIT: " + timeLimit + " minutes");
     }
 
     private void showBlockingOverlay(String packageName) {
