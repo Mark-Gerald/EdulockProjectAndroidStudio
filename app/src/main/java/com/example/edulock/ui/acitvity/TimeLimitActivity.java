@@ -407,62 +407,52 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void saveRestrictions() {
-        Log.e("TimeLimitActivity", "🔴🔴🔴 saveRestrictions() CALLED 🔴🔴🔴");
-        Toast.makeText(this, "SAVE method executing!", Toast.LENGTH_LONG).show();
+        Log.d("TimeLimitActivity", "💾 SAVE button clicked");
 
-        // ✅ STEP 1: Get current time from pickers
+        // ✅ STEP 1: Get time from pickers
         LinearLayout container = findViewById(R.id.time_picker_container);
         int hours = 0, minutes = 0, seconds = 0;
 
         if (container != null && container.getChildCount() >= 5) {
             try {
-                View child0 = container.getChildAt(0);
-                View child2 = container.getChildAt(2);
-                View child4 = container.getChildAt(4);
+                NumberPicker hourPicker = (NumberPicker) container.getChildAt(0);
+                NumberPicker minutePicker = (NumberPicker) container.getChildAt(2);
+                NumberPicker secondPicker = (NumberPicker) container.getChildAt(4);
 
-                Log.d(TAG, "Child 0 type: " + child0.getClass().getSimpleName());
-                Log.d(TAG, "Child 2 type: " + child2.getClass().getSimpleName());
-                Log.d(TAG, "Child 4 type: " + child4.getClass().getSimpleName());
-
-                NumberPicker hourPicker = (NumberPicker) child0;
-                NumberPicker minutePicker = (NumberPicker) child2;
-                NumberPicker secondPicker = (NumberPicker) child4;
+                hours = hourPicker.getValue();
+                minutes = minutePicker.getValue();
+                seconds = secondPicker.getValue();
             } catch (Exception e) {
-                Log.e(TAG, "Error getting time picker values: " + e.getMessage());
+                Log.e("TimeLimitActivity", "❌ Error reading time pickers: " + e.getMessage());
+                Toast.makeText(this, "Error reading time", Toast.LENGTH_SHORT).show();
+                return;
             }
         }
 
-        // ✅ STEP 2: Convert to total seconds, then to minutes
+        // ✅ STEP 2: Convert to minutes
         int totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
-        selectedTimeLimit = (totalSeconds == 0) ? 1 : totalSeconds / 60;  // Convert to minutes
+        int selectedTimeLimit = (totalSeconds == 0) ? 1 : totalSeconds / 60;
 
-        Log.d("TimeLimitActivity", "⏱️ Time selected: " + hours + "h " + minutes + "m " + seconds + "s = " + selectedTimeLimit + " minutes");
+        Log.d("TimeLimitActivity", "⏱️  Time: " + hours + "h " + minutes + "m " + seconds + "s = " + selectedTimeLimit + " min");
 
-        // ✅ STEP 3: Save to SharedPreferences
-        Log.d("SAVE_DEBUG", "selectedApps BEFORE SAVE: " + selectedApps);
-        SharedPreferences.Editor editor = preferences.edit();
+        // ✅ STEP 3: Get selected apps
+        java.util.Set<String> selectedAppsSet = new java.util.HashSet<>(selectedApps);
+        Log.d("TimeLimitActivity", "📱 Selected apps: " + selectedAppsSet.size());
 
-        Set<String> restrictedApps = new HashSet<>();
-        restrictedApps.addAll(selectedApps);
-
-        Log.d("TimeLimitActivity", "💾 Saving: " + selectedApps.size() + " apps with " + selectedTimeLimit + " minutes time limit");
-
-        editor.clear();  // ✅ Clear all old data first
-        editor.putStringSet(KEY_RESTRICTED_APPS, restrictedApps);
-        editor.putInt(KEY_TIME_LIMIT, selectedTimeLimit);
-        editor.apply();
-
-        Log.d("TimeLimitActivity", "✅ Data saved to SharedPreferences");
-
-        // ✅ Verify saved data
-        Set<String> test = preferences.getStringSet(KEY_RESTRICTED_APPS, new HashSet<>());
-        int savedTime = preferences.getInt(KEY_TIME_LIMIT, -1);
-        Log.d("SAVE_DEBUG", "✅ VERIFIED - Apps: " + test.size() + ", Time: " + savedTime + " minutes");
-
-        // ✅ STEP 4: Notify the service
+        // ✅ STEP 4: Save using RestrictionManager
         try {
-            Log.d("TimeLimitActivity", "🚀 Sending UPDATE_RESTRICTIONS to service...");
-            Intent updateIntent = new Intent(this, AppMonitoringService.class);
+            com.example.edulock.manager.RestrictionManager manager =
+                    new com.example.edulock.manager.RestrictionManager(this);
+            manager.saveRestrictions(selectedAppsSet, selectedTimeLimit);
+        } catch (Exception e) {
+            Log.e("TimeLimitActivity", "❌ Error saving restrictions: " + e.getMessage());
+            Toast.makeText(this, "Error saving restrictions", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // ✅ STEP 5: Tell service to reload
+        try {
+            Intent updateIntent = new Intent(this, com.example.edulock.service.AppMonitoringService.class);
             updateIntent.setAction("UPDATE_RESTRICTIONS");
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -473,10 +463,10 @@ public class TimeLimitActivity extends AppCompatActivity {
 
             Log.d("TimeLimitActivity", "✅ Service update sent");
         } catch (Exception e) {
-            Log.e("TimeLimitActivity", "Error sending update to service: " + e.getMessage());
+            Log.e("TimeLimitActivity", "❌ Error starting service: " + e.getMessage());
         }
 
-        Toast.makeText(this, "✅ Saved: " + selectedApps.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "✅ Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
         finish();
     }
 
