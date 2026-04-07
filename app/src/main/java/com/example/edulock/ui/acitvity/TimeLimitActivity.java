@@ -422,6 +422,8 @@ public class TimeLimitActivity extends AppCompatActivity {
                 hours = hourPicker.getValue();
                 minutes = minutePicker.getValue();
                 seconds = secondPicker.getValue();
+
+                Log.d("TimeLimitActivity", "⏱️  Pickers read: " + hours + "h " + minutes + "m " + seconds + "s");
             } catch (Exception e) {
                 Log.e("TimeLimitActivity", "❌ Error reading time pickers: " + e.getMessage());
                 Toast.makeText(this, "Error reading time", Toast.LENGTH_SHORT).show();
@@ -433,19 +435,37 @@ public class TimeLimitActivity extends AppCompatActivity {
         int totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
         int selectedTimeLimit = (totalSeconds == 0) ? 1 : totalSeconds / 60;
 
-        Log.d("TimeLimitActivity", "⏱️  Time: " + hours + "h " + minutes + "m " + seconds + "s = " + selectedTimeLimit + " min");
+        Log.d("TimeLimitActivity", "⏱️  Converted: " + selectedTimeLimit + " minutes");
 
         // ✅ STEP 3: Get selected apps
-        java.util.Set<String> selectedAppsSet = new java.util.HashSet<>(selectedApps);
-        Log.d("TimeLimitActivity", "📱 Selected apps: " + selectedAppsSet.size());
+        Set<String> selectedAppsSet = new HashSet<>(selectedApps);
+        Log.d("TimeLimitActivity", "📱 Selected apps count: " + selectedAppsSet.size());
+        for (String app : selectedAppsSet) {
+            Log.d("TimeLimitActivity", "   - " + app);
+        }
 
-        // ✅ STEP 4: Save using RestrictionManager
+        // ✅ STEP 4: Save to SharedPreferences DIRECTLY
         try {
-            com.example.edulock.manager.RestrictionManager manager =
-                    new com.example.edulock.manager.RestrictionManager(this);
-            manager.saveRestrictions(selectedAppsSet, selectedTimeLimit);
+            SharedPreferences prefs = getSharedPreferences("app_restrictions", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+
+            // Clear old data
+            editor.clear();
+
+            // Save new data
+            editor.putStringSet("restricted_apps", selectedAppsSet);
+            editor.putInt("selected_time_limit", selectedTimeLimit);
+            editor.commit();  // Use commit() not apply() to ensure it saves immediately
+
+            Log.d("TimeLimitActivity", "✅ Data saved to SharedPreferences");
+
+            // VERIFY it was saved
+            Set<String> verify = prefs.getStringSet("restricted_apps", new HashSet<>());
+            int verifyTime = prefs.getInt("selected_time_limit", -1);
+            Log.d("TimeLimitActivity", "✅ VERIFICATION - Apps: " + verify.size() + ", Time: " + verifyTime);
+
         } catch (Exception e) {
-            Log.e("TimeLimitActivity", "❌ Error saving restrictions: " + e.getMessage());
+            Log.e("TimeLimitActivity", "❌ Error saving to SharedPreferences: " + e.getMessage());
             Toast.makeText(this, "Error saving restrictions", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -466,7 +486,7 @@ public class TimeLimitActivity extends AppCompatActivity {
             Log.e("TimeLimitActivity", "❌ Error starting service: " + e.getMessage());
         }
 
-        Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "✅ Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
 
         try {
             Thread.sleep(500);
