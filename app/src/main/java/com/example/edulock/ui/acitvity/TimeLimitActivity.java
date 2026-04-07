@@ -65,6 +65,8 @@ public class TimeLimitActivity extends AppCompatActivity {
         setupSearch();
         setupSelectAllCheckbox();
         setupButtons();
+
+        Log.d("TimeLimitActivity", "✅ onCreate completed - all setup done");
     }
 
     private void initializeViews() {
@@ -246,9 +248,22 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        findViewById(R.id.back_arrow).setOnClickListener(v -> finish());
-        findViewById(R.id.save_button).setOnClickListener(v -> saveRestrictions());
-        findViewById(R.id.cancel_button).setOnClickListener(v -> finish());
+        Log.d("TimeLimitActivity", "Setting up buttons...");
+
+        findViewById(R.id.back_arrow).setOnClickListener(v -> {
+            Log.d("TimeLimitActivity", "Back arrow clicked");
+            finish();
+        });
+
+        findViewById(R.id.save_button).setOnClickListener(v -> {
+            Log.d("TimeLimitActivity", "🟢 SAVE BUTTON CLICKED");
+            saveRestrictions();
+        });
+
+        findViewById(R.id.cancel_button).setOnClickListener(v -> {
+            Log.d("TimeLimitActivity", "Cancel button clicked");
+            finish();
+        });
     }
 
     private void loadInstalledApps() {
@@ -392,6 +407,9 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void saveRestrictions() {
+        Log.e("TimeLimitActivity", "🔴🔴🔴 saveRestrictions() CALLED 🔴🔴🔴");
+        Toast.makeText(this, "SAVE method executing!", Toast.LENGTH_LONG).show();
+
         // ✅ STEP 1: Get current time from pickers
         LinearLayout container = findViewById(R.id.time_picker_container);
         int hours = 0, minutes = 0, seconds = 0;
