@@ -416,13 +416,17 @@ public class TimeLimitActivity extends AppCompatActivity {
 
         if (container != null && container.getChildCount() >= 5) {
             try {
-                NumberPicker hourPicker = (NumberPicker) container.getChildAt(0);
-                NumberPicker minutePicker = (NumberPicker) container.getChildAt(2);
-                NumberPicker secondPicker = (NumberPicker) container.getChildAt(4);
+                View child0 = container.getChildAt(0);
+                View child2 = container.getChildAt(2);
+                View child4 = container.getChildAt(4);
 
-                hours = hourPicker.getValue();
-                minutes = minutePicker.getValue();
-                seconds = secondPicker.getValue();
+                Log.d(TAG, "Child 0 type: " + child0.getClass().getSimpleName());
+                Log.d(TAG, "Child 2 type: " + child2.getClass().getSimpleName());
+                Log.d(TAG, "Child 4 type: " + child4.getClass().getSimpleName());
+
+                NumberPicker hourPicker = (NumberPicker) child0;
+                NumberPicker minutePicker = (NumberPicker) child2;
+                NumberPicker secondPicker = (NumberPicker) child4;
             } catch (Exception e) {
                 Log.e(TAG, "Error getting time picker values: " + e.getMessage());
             }
