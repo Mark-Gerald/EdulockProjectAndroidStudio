@@ -204,19 +204,27 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void loadSavedSettings() {
-        int savedTimeLimit = preferences.getInt(KEY_TIME_LIMIT, 0); // default 0 = no restriction
+        int savedTimeLimit = preferences.getInt(KEY_TIME_LIMIT, 0);
+        Log.d("TimeLimitActivity", "Loaded saved time limit: " + savedTimeLimit + " minutes");
+
         int hours = savedTimeLimit / 60;
         int minutes = savedTimeLimit % 60;
 
         LinearLayout container = findViewById(R.id.time_picker_container);
         if (container != null && container.getChildCount() >= 5) {
-            NumberPicker hourPicker = (NumberPicker) container.getChildAt(0);
-            NumberPicker minutePicker = (NumberPicker) container.getChildAt(2);
-            NumberPicker secondPicker = (NumberPicker) container.getChildAt(4);
+            try {
+                NumberPicker hourPicker = (NumberPicker) container.getChildAt(0);
+                NumberPicker minutePicker = (NumberPicker) container.getChildAt(2);
+                NumberPicker secondPicker = (NumberPicker) container.getChildAt(4);
 
-            hourPicker.setValue(hours);
-            minutePicker.setValue(minutes);
-            secondPicker.setValue(0);
+                hourPicker.setValue(hours);
+                minutePicker.setValue(minutes);
+                secondPicker.setValue(0);
+
+                Log.d("TimeLimitActivity", "Set pickers to: " + hours + "h " + minutes + "m");
+            } catch (Exception e) {
+                Log.e("TimeLimitActivity", "Error setting pickers: " + e.getMessage());
+            }
         }
     }
 
@@ -431,46 +439,47 @@ public class TimeLimitActivity extends AppCompatActivity {
 
         // ✅ STEP 2: Convert to minutes
         int totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
-        int selectedTimeLimit = (totalSeconds == 0) ? 1 : totalSeconds / 60;
+        int selectedTimeLimit = totalSeconds / 60; // Can be 0 if no time selected
 
         Log.d("TimeLimitActivity", "⏱️  Converted: " + selectedTimeLimit + " minutes");
 
         // ✅ STEP 3: Get selected apps
         Set<String> selectedAppsSet = new HashSet<>(selectedApps);
         Log.d("TimeLimitActivity", "📱 Selected apps count: " + selectedAppsSet.size());
-        for (String app : selectedAppsSet) {
-            Log.d("TimeLimitActivity", "   - " + app);
-        }
 
-        // ✅ STEP 4: Save to SharedPreferences DIRECTLY
+        // ✅ STEP 4: Save to SharedPreferences
         try {
             SharedPreferences prefs = getSharedPreferences("app_restrictions", MODE_PRIVATE);
             SharedPreferences.Editor editor = prefs.edit();
 
-            // Clear old data
-            editor.clear();
+            // Only save if there are apps selected
+            if (selectedAppsSet.isEmpty()) {
+                // No apps - clear everything
+                editor.clear();
+                Log.d("TimeLimitActivity", "No apps selected - clearing restrictions");
+            } else {
+                // Save apps and time limit
+                editor.putStringSet("restricted_apps", selectedAppsSet);
+                editor.putInt("selected_time_limit", selectedTimeLimit);
+                Log.d("TimeLimitActivity", "✅ Saving: " + selectedAppsSet.size() + " apps, " + selectedTimeLimit + " min");
+            }
 
-            // Save new data
-            editor.putStringSet("restricted_apps", selectedAppsSet);
-            editor.putInt("selected_time_limit", selectedTimeLimit);
-            editor.commit();  // Use commit() not apply() to ensure it saves immediately
+            editor.commit();
 
-            Log.d("TimeLimitActivity", "✅ Data saved to SharedPreferences");
-
-            // VERIFY it was saved
+            // Verify
             Set<String> verify = prefs.getStringSet("restricted_apps", new HashSet<>());
-            int verifyTime = prefs.getInt("selected_time_limit", -1);
-            Log.d("TimeLimitActivity", "✅ VERIFICATION - Apps: " + verify.size() + ", Time: " + verifyTime);
+            int verifyTime = prefs.getInt("selected_time_limit", 0);
+            Log.d("TimeLimitActivity", "✅ VERIFIED - Apps: " + verify.size() + ", Time: " + verifyTime);
 
         } catch (Exception e) {
-            Log.e("TimeLimitActivity", "❌ Error saving to SharedPreferences: " + e.getMessage());
+            Log.e("TimeLimitActivity", "❌ Error saving: " + e.getMessage());
             Toast.makeText(this, "Error saving restrictions", Toast.LENGTH_SHORT).show();
             return;
         }
 
         // ✅ STEP 5: Tell service to reload
         try {
-            Intent updateIntent = new Intent(this, com.example.edulock.service.AppMonitoringService.class);
+            Intent updateIntent = new Intent(this, AppMonitoringService.class);
             updateIntent.setAction("UPDATE_RESTRICTIONS");
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -1,7 +1,6 @@
 package com.example.edulock.service;
 
 import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -71,19 +70,22 @@ public class AppMonitoringService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) {
+            Log.d(TAG, "Intent is null");
             return START_STICKY;
         }
 
         String action = intent.getAction();
+        Log.d(TAG, "onStartCommand action: " + action);
 
         if ("APP_SWITCHED".equals(action)) {
             // App was switched - check if we should block it
             String packageName = intent.getStringExtra("package_name");
+            Log.d(TAG, "APP_SWITCHED received for: " + packageName);
             handleAppSwitch(packageName);
         }
         else if ("UPDATE_RESTRICTIONS".equals(action)) {
             // User saved new restrictions
-            Log.d(TAG, "🔄 Restrictions updated");
+            Log.d(TAG, "🔄 UPDATE_RESTRICTIONS received");
             restrictionManager = new RestrictionManager(this);
             updateNotification();
         }
@@ -95,26 +97,36 @@ public class AppMonitoringService extends Service {
      * Handle when an app comes to foreground
      */
     private void handleAppSwitch(String packageName) {
-        if (packageName == null || packageName.isEmpty()) return;
+        if (packageName == null || packageName.isEmpty()) {
+            Log.d(TAG, "Package name is null/empty");
+            return;
+        }
 
-        Log.d(TAG, "📱 App switched: " + packageName);
+        Log.d(TAG, "📱 Handling app switch: " + packageName);
 
         // Stop tracking previous app
         stopTrackingUsage();
         isBlockingActive.set(false); // Reset blocking state on app switch
 
-        if (!restrictionManager.isAppRestricted(packageName)) {
+        // Check if app is restricted
+        boolean isRestricted = restrictionManager.isAppRestricted(packageName);
+        Log.d(TAG, "App restricted? " + isRestricted);
+
+        if (!isRestricted) {
             Log.d(TAG, "✅ App not restricted: " + packageName);
             updateNotification();
             return;
         }
 
-        Log.d(TAG, "🚨 App IS RESTRICTED: " + packageName);
+        // App IS restricted - check time
+        boolean timeExceeded = restrictionManager.isTimeExceeded(packageName);
+        Log.d(TAG, "Time exceeded? " + timeExceeded);
 
-        if (restrictionManager.isTimeExceeded(packageName)) {
+        if (timeExceeded) {
             Log.d(TAG, "⏰ TIME LIMIT EXCEEDED for: " + packageName);
             blockApp(packageName);
         } else {
+            // Time not exceeded - start tracking
             long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
             int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
             Log.d(TAG, "⏱️ " + packageName + ": Used " + usedSeconds + "s of " + limitSeconds + "s");
@@ -129,7 +141,7 @@ public class AppMonitoringService extends Service {
      */
     private void blockApp(String packageName) {
         if (packageName.equals(lastBlockedApp) && isBlockingActive.get()) {
-            Log.d(TAG, "⏭️  Already blocking this app");
+            Log.d(TAG, "⏭️  Already blocking this app, skipping");
             return;
         }
 
@@ -138,26 +150,50 @@ public class AppMonitoringService extends Service {
 
         Log.d(TAG, "🛑 BLOCKING APP: " + packageName);
 
-        // Show overlay using the same mechanism as teacher control
-        overlayManager.showBlockingOverlay(packageName);
+        // Show overlay - use TimeLimitBlockedActivity
+        try {
+            Intent overlayIntent = new Intent(this, com.example.edulock.ui.acitvity.TimeLimitBlockedActivity.class);
+            overlayIntent.putExtra("package_name", packageName);
+            overlayIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK |
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                            Intent.FLAG_ACTIVITY_NO_ANIMATION |
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            startActivity(overlayIntent);
+            Log.d(TAG, "✅ Overlay activity started");
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error starting overlay: " + e.getMessage(), e);
+            isBlockingActive.set(false);
+        }
     }
 
     /**
-     * Track usage time for an app session
-     * This runs while the app is in foreground
+     * Track usage time for an app session - increments every second
      */
     private void startTrackingUsage(String packageName) {
         // Stop any previous tracking
         stopTrackingUsage();
 
         currentTrackedApp = packageName;
+        Log.d(TAG, "▶️  Starting to track: " + packageName);
+
         trackingRunnable = new Runnable() {
             @Override
             public void run() {
-                if (!currentTrackedApp.equals(packageName)) return;
+                // Safety check - only track if this is still the current app
+                if (!currentTrackedApp.equals(packageName)) {
+                    Log.d(TAG, "App changed, stopping tracking");
+                    return;
+                }
 
+                // Add 1 second to usage
                 restrictionManager.addUsageTime(packageName, 1);
-                Log.d(TAG, "⏱️ Tracking: " + packageName + " | Used: " + restrictionManager.getTodayUsageSeconds(packageName) + "s");
+
+                long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
+                int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
+
+                Log.d(TAG, "⏱️ " + packageName + " | Used: " + usedSeconds + "s / Limit: " + limitSeconds + "s");
 
                 // Check if time exceeded NOW
                 if (restrictionManager.isTimeExceeded(packageName)) {
@@ -170,6 +206,8 @@ public class AppMonitoringService extends Service {
                 trackingHandler.postDelayed(this, 1000);
             }
         };
+
+        // Start tracking after 1 second
         trackingHandler.postDelayed(trackingRunnable, 1000);
     }
 
@@ -177,10 +215,10 @@ public class AppMonitoringService extends Service {
         if (trackingRunnable != null) {
             trackingHandler.removeCallbacks(trackingRunnable);
             trackingRunnable = null;
+            Log.d(TAG, "⏸️  Stopped tracking");
         }
         currentTrackedApp = "";
     }
-
 
     /**
      * Update notification with current restrictions status
@@ -191,6 +229,7 @@ public class AppMonitoringService extends Service {
                 NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (manager != null) {
                     manager.notify(NOTIFICATION_ID, createNotification());
+                    Log.d(TAG, "📢 Notification updated");
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error updating notification: " + e.getMessage());
@@ -219,7 +258,7 @@ public class AppMonitoringService extends Service {
             contentText = "Monitoring " + appCount + " apps with " + timeLimit + " min limit";
         }
 
-        Log.d(TAG, "📢 Notification: " + contentText);
+        Log.d(TAG, "📢 Notification text: " + contentText);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("EduLock Active")
@@ -261,18 +300,5 @@ public class AppMonitoringService extends Service {
         stopTrackingUsage();
         isBlockingActive.set(false);
         Log.d(TAG, "🔴 Service destroyed");
-    }
-
-    public static class ServiceRestartReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.d("ServiceRestartReceiver", "📡 Received: " + intent.getAction());
-            Intent serviceIntent = new Intent(context, AppMonitoringService.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent);
-            } else {
-                context.startService(serviceIntent);
-            }
-        }
     }
 }
