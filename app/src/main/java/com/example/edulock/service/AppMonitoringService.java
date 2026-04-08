@@ -117,6 +117,12 @@ public class AppMonitoringService extends Service {
     /**
      * Handle when an app comes to foreground
      */
+    /**
+     * Handle when an app comes to foreground
+     */
+    /**
+     * Handle when an app comes to foreground
+     */
     private void handleAppSwitch(String packageName) {
         if (packageName == null || packageName.isEmpty()) {
             Log.d(TAG, "❌ Package name is null/empty");
@@ -127,6 +133,12 @@ public class AppMonitoringService extends Service {
         Log.d(TAG, "📱 APP SWITCH EVENT");
         Log.d(TAG, "Package: " + packageName);
         Log.d(TAG, "═══════════════════════════════════════════");
+
+        // ✅ CRITICAL FIX: If overlay is showing, ignore all app switches
+        if (isBlockingActive.get()) {
+            Log.d(TAG, "⏸️  Overlay is active - ignoring this app switch");
+            return;
+        }
 
         // Stop tracking previous app
         stopTrackingUsage();
@@ -222,6 +234,10 @@ public class AppMonitoringService extends Service {
 
             startActivity(overlayIntent);
             Log.d(TAG, "✅ Overlay activity started successfully");
+
+            // Reset blocking state after overlay shows
+            resetBlockingStateAfterDelay();
+
         } catch (Exception e) {
             Log.e(TAG, "❌ Error starting overlay: " + e.getMessage(), e);
             isBlockingActive.set(false);
@@ -349,6 +365,22 @@ public class AppMonitoringService extends Service {
                 manager.createNotificationChannel(channel);
             }
         }
+    }
+
+    /**
+     * Reset blocking state after a delay
+     * This allows the overlay to dismiss and prevents re-blocking
+     */
+    private void resetBlockingStateAfterDelay() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000); // Wait 2 seconds
+                isBlockingActive.set(false);
+                Log.d(TAG, "🔄 Blocking state reset");
+            } catch (InterruptedException e) {
+                Log.e(TAG, "Sleep interrupted: " + e.getMessage());
+            }
+        }).start();
     }
 
     @Override

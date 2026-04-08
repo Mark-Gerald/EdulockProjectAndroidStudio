@@ -56,6 +56,9 @@ public class TimeLimitBlockedActivity extends AppCompatActivity {
         Log.d(TAG, "🏠 Sending to home screen...");
 
         try {
+            // Reset blocking state in service
+            // (We'll handle this by having a delay before allowing new blocks)
+
             Intent homeIntent = new Intent(Intent.ACTION_MAIN);
             homeIntent.addCategory(Intent.CATEGORY_HOME);
             homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
