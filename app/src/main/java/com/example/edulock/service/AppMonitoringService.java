@@ -202,9 +202,6 @@ public class AppMonitoringService extends Service {
         return false;
     }
 
-    /**
-     * Block the app by showing overlay
-     */
     private void blockApp(String packageName) {
         Log.d(TAG, "");
         Log.d(TAG, "╔════════════════════════════════════════╗");
@@ -230,7 +227,6 @@ public class AppMonitoringService extends Service {
         Log.d(TAG, "✅ SHOWING OVERLAY FOR: " + packageName);
 
         try {
-            // Use OverlayBlockService instead of activity
             Intent overlayIntent = new Intent(this, OverlayBlockService.class);
             overlayIntent.putExtra("package_name", packageName);
 

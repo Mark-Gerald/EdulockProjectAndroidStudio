@@ -6,7 +6,9 @@
     android:gravity="center"
     android:orientation="vertical"
     android:background="#CC000000"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:focusable="true"
+    android:clickable="true">
 
     <ImageView
         android:layout_width="120dp"
@@ -49,6 +51,8 @@
             android:backgroundTint="@color/Violet"
             android:layout_marginBottom="16dp"
             android:padding="12dp"
-            android:textSize="16sp"/>
+            android:textSize="16sp"
+            android:focusable="true"
+            android:clickable="true"/>
     </LinearLayout>
 </LinearLayout>
