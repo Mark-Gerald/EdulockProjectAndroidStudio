@@ -97,7 +97,8 @@
             android:launchMode="singleTop"
             android:exported="false"
             android:showWhenLocked="true"
-            android:turnScreenOn="true" />
+            android:turnScreenOn="true"
+            android:hardwareAccelerated="true"/>
 
         <!-- SERVICES FOR MONITORING AND BLOCKING -->
         <service
