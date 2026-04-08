@@ -61,7 +61,15 @@ public class RestrictionManager {
     /**
      * Check if an app is restricted
      */
+    /**
+     * Check if an app is restricted
+     */
     public boolean isAppRestricted(String packageName) {
+        // Never block our own app
+        if (packageName.equals(context.getPackageName())) {
+            return false;
+        }
+
         return getRestrictedApps().contains(packageName);
     }
 
