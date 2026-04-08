@@ -439,7 +439,7 @@ public class TimeLimitActivity extends AppCompatActivity {
 
         // ✅ STEP 2: Convert to minutes
         int totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
-        int selectedTimeLimit = totalSeconds / 60; // Can be 0 if no time selected
+        int selectedTimeLimit = totalSeconds / 60;
 
         Log.d("TimeLimitActivity", "⏱️  Converted: " + selectedTimeLimit + " minutes");
 
@@ -447,38 +447,49 @@ public class TimeLimitActivity extends AppCompatActivity {
         Set<String> selectedAppsSet = new HashSet<>(selectedApps);
         Log.d("TimeLimitActivity", "📱 Selected apps count: " + selectedAppsSet.size());
 
+        if (selectedAppsSet.isEmpty()) {
+            Log.e("TimeLimitActivity", "❌ NO APPS SELECTED!");
+            Toast.makeText(this, "Please select at least one app", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        for (String app : selectedAppsSet) {
+            Log.d("TimeLimitActivity", "   📦 App: " + app);
+        }
+
         // ✅ STEP 4: Save to SharedPreferences
         try {
             SharedPreferences prefs = getSharedPreferences("app_restrictions", MODE_PRIVATE);
             SharedPreferences.Editor editor = prefs.edit();
 
-            // Only save if there are apps selected
-            if (selectedAppsSet.isEmpty()) {
-                // No apps - clear everything
-                editor.clear();
-                Log.d("TimeLimitActivity", "No apps selected - clearing restrictions");
-            } else {
-                // Save apps and time limit
-                editor.putStringSet("restricted_apps", selectedAppsSet);
-                editor.putInt("selected_time_limit", selectedTimeLimit);
-                Log.d("TimeLimitActivity", "✅ Saving: " + selectedAppsSet.size() + " apps, " + selectedTimeLimit + " min");
-            }
+            // Clear and save
+            editor.clear();
+            editor.putStringSet("restricted_apps", selectedAppsSet);
+            editor.putInt("selected_time_limit", selectedTimeLimit);
 
-            editor.commit();
+            Log.d("TimeLimitActivity", "🔧 About to save to SharedPreferences...");
+            boolean result = editor.commit();
+            Log.d("TimeLimitActivity", "💾 Commit result: " + result);
 
-            // Verify
+            // Verify immediately
+            Thread.sleep(100);
             Set<String> verify = prefs.getStringSet("restricted_apps", new HashSet<>());
-            int verifyTime = prefs.getInt("selected_time_limit", 0);
+            int verifyTime = prefs.getInt("selected_time_limit", -1);
             Log.d("TimeLimitActivity", "✅ VERIFIED - Apps: " + verify.size() + ", Time: " + verifyTime);
 
+            if (verify.isEmpty()) {
+                Log.e("TimeLimitActivity", "❌ VERIFICATION FAILED - Apps not saved!");
+            }
+
         } catch (Exception e) {
-            Log.e("TimeLimitActivity", "❌ Error saving: " + e.getMessage());
+            Log.e("TimeLimitActivity", "❌ Error saving: " + e.getMessage(), e);
             Toast.makeText(this, "Error saving restrictions", Toast.LENGTH_SHORT).show();
             return;
         }
 
         // ✅ STEP 5: Tell service to reload
         try {
+            Log.d("TimeLimitActivity", "🚀 Sending UPDATE_RESTRICTIONS to service...");
             Intent updateIntent = new Intent(this, AppMonitoringService.class);
             updateIntent.setAction("UPDATE_RESTRICTIONS");
 
@@ -488,9 +499,9 @@ public class TimeLimitActivity extends AppCompatActivity {
                 startService(updateIntent);
             }
 
-            Log.d("TimeLimitActivity", "✅ Service update sent");
+            Log.d("TimeLimitActivity", "✅ Service update intent sent");
         } catch (Exception e) {
-            Log.e("TimeLimitActivity", "❌ Error starting service: " + e.getMessage());
+            Log.e("TimeLimitActivity", "❌ Error starting service: " + e.getMessage(), e);
         }
 
         Toast.makeText(this, "✅ Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();

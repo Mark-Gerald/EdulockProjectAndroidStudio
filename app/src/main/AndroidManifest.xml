@@ -157,12 +157,13 @@
 
         <!-- BROADCAST RECEIVERS -->
 
-        <!-- Restart service when app monitoring crashes -->
-        <receiver android:name=".service.AppMonitoringService$ServiceRestartReceiver"
-            android:exported="false">
+        <!-- Boot receiver - Restarts monitoring service when phone restarts -->
+        <receiver android:name=".receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="com.example.edulock.RESTART_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 

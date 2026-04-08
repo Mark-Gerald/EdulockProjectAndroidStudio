@@ -70,7 +70,7 @@ public class TimeLimitBlockedActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         Log.d(TAG, "Back pressed - ignoring");
-        // Do nothing - prevent dismissing
+        // Intentionally do nothing to prevent dismissing the overlay
     }
 
     @Override
