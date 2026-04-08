@@ -55,7 +55,7 @@ public class RestrictionManager {
      * Get time limit in minutes for all apps
      */
     public int getTimeLimitMinutes() {
-        return prefs.getInt(KEY_TIME_LIMIT, 1);
+        return prefs.getInt(KEY_TIME_LIMIT, 0);
     }
 
     /**
@@ -108,19 +108,18 @@ public class RestrictionManager {
      * Check if app has exceeded its time limit
      */
     public boolean isTimeExceeded(String packageName) {
-        if (!isAppRestricted(packageName)) {
-            return false;
-        }
+        if (!isAppRestricted(packageName)) return false;
+
+        int limitMinutes = getTimeLimitMinutes();
+        if (limitMinutes == 0) return false; // No limit set
 
         long usageSeconds = getTodayUsageSeconds(packageName);
-        long limitSeconds = getTimeLimitMinutes() * 60L;
+        long limitSeconds = limitMinutes * 60L;
 
         boolean exceeded = usageSeconds >= limitSeconds;
-
         if (exceeded) {
             Log.d(TAG, "🚨 TIME EXCEEDED: " + packageName + " (" + usageSeconds + "s >= " + limitSeconds + "s)");
         }
-
         return exceeded;
     }
 

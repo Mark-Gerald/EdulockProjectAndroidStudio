@@ -90,6 +90,15 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustNothing" />
 
+        <activity
+            android:name=".ui.acitvity.TimeLimitBlockedActivity"
+            android:configChanges="orientation|screenSize"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+
         <!-- SERVICES FOR MONITORING AND BLOCKING -->
         <service
             android:name=".service.BlockOverlayService"

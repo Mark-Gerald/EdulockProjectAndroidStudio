@@ -197,21 +197,19 @@ public class TimeLimitActivity extends AppCompatActivity {
 
     private void updateSelectedTimeFromPicker(NumberPicker hours, NumberPicker minutes, NumberPicker seconds) {
         int totalSeconds = (hours.getValue() * 3600) + (minutes.getValue() * 60) + seconds.getValue();
-        // If total is 0, default to 1 minute
-        selectedTimeLimit = (totalSeconds == 0) ? 1 : totalSeconds / 60;
+        selectedTimeLimit = totalSeconds / 60; // 0 is valid — means no restriction
         Log.d(TAG, "Selected time: " + hours.getValue() + ":" +
                 String.format("%02d", minutes.getValue()) + ":" +
                 String.format("%02d", seconds.getValue()) + " = " + selectedTimeLimit + " minutes");
     }
 
     private void loadSavedSettings() {
-        int savedTimeLimit = preferences.getInt(KEY_TIME_LIMIT, 1);
-        // Convert minutes back to HH:MM:SS format
+        int savedTimeLimit = preferences.getInt(KEY_TIME_LIMIT, 0); // default 0 = no restriction
         int hours = savedTimeLimit / 60;
         int minutes = savedTimeLimit % 60;
 
         LinearLayout container = findViewById(R.id.time_picker_container);
-        if (container != null && container.getChildCount() >= 3) {
+        if (container != null && container.getChildCount() >= 5) {
             NumberPicker hourPicker = (NumberPicker) container.getChildAt(0);
             NumberPicker minutePicker = (NumberPicker) container.getChildAt(2);
             NumberPicker secondPicker = (NumberPicker) container.getChildAt(4);

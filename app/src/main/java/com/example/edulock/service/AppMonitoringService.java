@@ -1,6 +1,7 @@
 package com.example.edulock.service;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -39,6 +40,10 @@ public class AppMonitoringService extends Service {
     private RestrictionManager restrictionManager;
     private OverlayManager overlayManager;
     private Handler mainHandler;
+
+    private String currentTrackedApp = "";
+    private Handler trackingHandler = new Handler(Looper.getMainLooper());
+    private Runnable trackingRunnable;
 
     private String lastBlockedApp = "";
     private AtomicBoolean isBlockingActive = new AtomicBoolean(false);
@@ -90,34 +95,29 @@ public class AppMonitoringService extends Service {
      * Handle when an app comes to foreground
      */
     private void handleAppSwitch(String packageName) {
-        if (packageName == null || packageName.isEmpty()) {
-            return;
-        }
+        if (packageName == null || packageName.isEmpty()) return;
 
         Log.d(TAG, "📱 App switched: " + packageName);
 
-        // Check if this app is restricted
+        // Stop tracking previous app
+        stopTrackingUsage();
+        isBlockingActive.set(false); // Reset blocking state on app switch
+
         if (!restrictionManager.isAppRestricted(packageName)) {
             Log.d(TAG, "✅ App not restricted: " + packageName);
+            updateNotification();
             return;
         }
 
         Log.d(TAG, "🚨 App IS RESTRICTED: " + packageName);
 
-        // Check if time limit exceeded TODAY
         if (restrictionManager.isTimeExceeded(packageName)) {
             Log.d(TAG, "⏰ TIME LIMIT EXCEEDED for: " + packageName);
-
-            // Show overlay to block this app
             blockApp(packageName);
         } else {
-            // Time not exceeded yet - show how much time used
             long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
             int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
-
-            Log.d(TAG, "⏱️  " + packageName + ": Used " + usedSeconds + "s of " + limitSeconds + "s");
-
-            // Start tracking this session
+            Log.d(TAG, "⏱️ " + packageName + ": Used " + usedSeconds + "s of " + limitSeconds + "s");
             startTrackingUsage(packageName);
         }
 
@@ -147,18 +147,40 @@ public class AppMonitoringService extends Service {
      * This runs while the app is in foreground
      */
     private void startTrackingUsage(String packageName) {
-        new Thread(() -> {
-            try {
-                // Track usage every second while app is in foreground
-                // This will be called each time the app comes to foreground
-                restrictionManager.addUsageTime(packageName, 1);
+        // Stop any previous tracking
+        stopTrackingUsage();
 
-                Log.d(TAG, "⏱️  Tracking usage for: " + packageName);
-            } catch (Exception e) {
-                Log.e(TAG, "Error tracking usage: " + e.getMessage());
+        currentTrackedApp = packageName;
+        trackingRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (!currentTrackedApp.equals(packageName)) return;
+
+                restrictionManager.addUsageTime(packageName, 1);
+                Log.d(TAG, "⏱️ Tracking: " + packageName + " | Used: " + restrictionManager.getTodayUsageSeconds(packageName) + "s");
+
+                // Check if time exceeded NOW
+                if (restrictionManager.isTimeExceeded(packageName)) {
+                    Log.d(TAG, "🚨 TIME LIMIT REACHED for: " + packageName);
+                    blockApp(packageName);
+                    return; // Stop tracking
+                }
+
+                // Continue tracking every second
+                trackingHandler.postDelayed(this, 1000);
             }
-        }).start();
+        };
+        trackingHandler.postDelayed(trackingRunnable, 1000);
     }
+
+    private void stopTrackingUsage() {
+        if (trackingRunnable != null) {
+            trackingHandler.removeCallbacks(trackingRunnable);
+            trackingRunnable = null;
+        }
+        currentTrackedApp = "";
+    }
+
 
     /**
      * Update notification with current restrictions status
@@ -236,7 +258,21 @@ public class AppMonitoringService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        stopTrackingUsage();
         isBlockingActive.set(false);
         Log.d(TAG, "🔴 Service destroyed");
+    }
+
+    public static class ServiceRestartReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d("ServiceRestartReceiver", "📡 Received: " + intent.getAction());
+            Intent serviceIntent = new Intent(context, AppMonitoringService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent);
+            } else {
+                context.startService(serviceIntent);
+            }
+        }
     }
 }
