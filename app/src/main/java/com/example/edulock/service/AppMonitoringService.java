@@ -69,27 +69,44 @@ public class AppMonitoringService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand called");
+
         if (intent == null) {
-            Log.d(TAG, "Intent is null");
+            Log.d(TAG, "⚠️  Intent is null, re-creating managers");
+            restrictionManager = new RestrictionManager(this);
+            updateNotification();
             return START_STICKY;
         }
 
         String action = intent.getAction();
-        Log.d(TAG, "onStartCommand action: " + action);
+        Log.d(TAG, "Action received: " + (action != null ? action : "null"));
 
-        if ("APP_SWITCHED".equals(action)) {
-            // App was switched - check if we should block it
-            String packageName = intent.getStringExtra("package_name");
-            Log.d(TAG, "APP_SWITCHED received for: " + packageName);
-            handleAppSwitch(packageName);
-        }
-        else if ("UPDATE_RESTRICTIONS".equals(action)) {
-            // User saved new restrictions
-            Log.d(TAG, "🔄 UPDATE_RESTRICTIONS received");
+        // Handle UPDATE_RESTRICTIONS - reload data
+        if ("UPDATE_RESTRICTIONS".equals(action)) {
+            Log.d(TAG, "🔄 UPDATE_RESTRICTIONS received - reloading everything");
+
+            // Create NEW instance to force reload from SharedPreferences
             restrictionManager = new RestrictionManager(this);
+
+            // Log what was loaded
+            int appCount = restrictionManager.getRestrictedApps().size();
+            int timeLimit = restrictionManager.getTimeLimitMinutes();
+            Log.d(TAG, "✅ Reloaded: " + appCount + " apps, " + timeLimit + " min limit");
+
+            // Update notification immediately
             updateNotification();
+            return START_STICKY;
         }
 
+        // Handle APP_SWITCHED
+        if ("APP_SWITCHED".equals(action)) {
+            String packageName = intent.getStringExtra("package_name");
+            Log.d(TAG, "📱 APP_SWITCHED: " + packageName);
+            handleAppSwitch(packageName);
+            return START_STICKY;
+        }
+
+        Log.d(TAG, "Unknown action or no action");
         return START_STICKY;
     }
 
@@ -248,6 +265,8 @@ public class AppMonitoringService extends Service {
 
         int appCount = restrictionManager.getRestrictedApps().size();
         int timeLimit = restrictionManager.getTimeLimitMinutes();
+
+        Log.d(TAG, "🔍 Creating notification - appCount=" + appCount + ", timeLimit=" + timeLimit);
 
         String contentText;
         if (appCount == 0) {
