@@ -119,6 +119,13 @@
         </service>
 
         <service
+            android:name=".service.OverlayBlockService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
+        <service
             android:name=".service.AppMonitoringService"
             android:enabled="true"
             android:exported="false"

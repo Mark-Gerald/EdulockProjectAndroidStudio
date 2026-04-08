@@ -205,12 +205,6 @@ public class AppMonitoringService extends Service {
     /**
      * Block the app by showing overlay
      */
-    /**
-     * Block the app by showing overlay
-     */
-    /**
-     * Block the app by showing overlay
-     */
     private void blockApp(String packageName) {
         Log.d(TAG, "");
         Log.d(TAG, "╔════════════════════════════════════════╗");
@@ -230,23 +224,23 @@ public class AppMonitoringService extends Service {
             return;
         }
 
-        // ✅ Set blocking ACTIVE for this specific app
         isBlockingActive.set(true);
         lastBlockedApp = packageName;
 
         Log.d(TAG, "✅ SHOWING OVERLAY FOR: " + packageName);
 
         try {
-            Intent overlayIntent = new Intent(this, TimeLimitBlockedActivity.class);
+            // Use OverlayBlockService instead of activity
+            Intent overlayIntent = new Intent(this, OverlayBlockService.class);
             overlayIntent.putExtra("package_name", packageName);
-            overlayIntent.addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK |
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                            Intent.FLAG_ACTIVITY_NO_ANIMATION |
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-            startActivity(overlayIntent);
-            Log.d(TAG, "✅ Overlay started for: " + packageName);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(overlayIntent);
+            } else {
+                startService(overlayIntent);
+            }
+
+            Log.d(TAG, "✅ Overlay service started for: " + packageName);
 
             // Schedule reset after 3 seconds
             scheduleBlockingReset(3000);
