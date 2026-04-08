@@ -114,21 +114,34 @@ public class AppMonitoringService extends Service {
     /**
      * Handle when an app comes to foreground
      */
+    /**
+     * Handle when an app comes to foreground
+     */
     private void handleAppSwitch(String packageName) {
         if (packageName == null || packageName.isEmpty()) {
-            Log.d(TAG, "Package name is null/empty");
+            Log.d(TAG, "❌ Package name is null/empty");
             return;
         }
 
-        Log.d(TAG, "📱 Handling app switch: " + packageName);
+        Log.d(TAG, "═══════════════════════════════════════════");
+        Log.d(TAG, "📱 APP SWITCH EVENT");
+        Log.d(TAG, "Package: " + packageName);
+        Log.d(TAG, "═══════════════════════════════════════════");
 
         // Stop tracking previous app
         stopTrackingUsage();
-        isBlockingActive.set(false); // Reset blocking state on app switch
+        isBlockingActive.set(false);
+
+        // Check if this is EduLock
+        if (packageName.equals(getPackageName())) {
+            Log.d(TAG, "✅ EduLock app detected - NOT blocking ourselves");
+            updateNotification();
+            return;
+        }
 
         // Check if app is restricted
         boolean isRestricted = restrictionManager.isAppRestricted(packageName);
-        Log.d(TAG, "App restricted? " + isRestricted);
+        Log.d(TAG, "🔍 Is restricted? " + isRestricted);
 
         if (!isRestricted) {
             Log.d(TAG, "✅ App not restricted: " + packageName);
@@ -136,18 +149,22 @@ public class AppMonitoringService extends Service {
             return;
         }
 
-        // App IS restricted - check time
+        Log.d(TAG, "🚨 App IS RESTRICTED: " + packageName);
+
+        // Get time info
+        long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
+        int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
         boolean timeExceeded = restrictionManager.isTimeExceeded(packageName);
-        Log.d(TAG, "Time exceeded? " + timeExceeded);
+
+        Log.d(TAG, "⏱️  Used: " + usedSeconds + "s / Limit: " + limitSeconds + "s");
+        Log.d(TAG, "⏰ Time exceeded? " + timeExceeded);
 
         if (timeExceeded) {
-            Log.d(TAG, "⏰ TIME LIMIT EXCEEDED for: " + packageName);
+            Log.d(TAG, "🚨🚨🚨 TIME LIMIT EXCEEDED - BLOCKING: " + packageName);
             blockApp(packageName);
         } else {
             // Time not exceeded - start tracking
-            long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
-            int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
-            Log.d(TAG, "⏱️ " + packageName + ": Used " + usedSeconds + "s of " + limitSeconds + "s");
+            Log.d(TAG, "▶️  Time not exceeded - starting to track: " + packageName);
             startTrackingUsage(packageName);
         }
 
@@ -160,22 +177,38 @@ public class AppMonitoringService extends Service {
     /**
      * Block the app by showing overlay
      */
+    /**
+     * Block the app by showing overlay
+     */
     private void blockApp(String packageName) {
-        if (packageName.equals(lastBlockedApp) && isBlockingActive.get()) {
-            Log.d(TAG, "⏭️  Already blocking this app, skipping");
+        Log.d(TAG, "");
+        Log.d(TAG, "╔════════════════════════════════════════╗");
+        Log.d(TAG, "║         BLOCKING APP NOW               ║");
+        Log.d(TAG, "╚════════════════════════════════════════╝");
+
+        if (packageName == null || packageName.isEmpty()) {
+            Log.e(TAG, "❌ Package name is null!");
             return;
         }
 
-        // Don't block EduLock itself
+        Log.d(TAG, "Target package: " + packageName);
+        Log.d(TAG, "Own package: " + getPackageName());
+
+        // Check if trying to block ourselves
         if (packageName.equals(getPackageName())) {
-            Log.d(TAG, "❌ Cannot block our own app!");
+            Log.e(TAG, "❌ CRITICAL: Cannot block our own app!");
+            return;
+        }
+
+        if (packageName.equals(lastBlockedApp) && isBlockingActive.get()) {
+            Log.d(TAG, "⏭️  Already blocking this app");
             return;
         }
 
         lastBlockedApp = packageName;
         isBlockingActive.set(true);
 
-        Log.d(TAG, "🛑 BLOCKING APP: " + packageName);
+        Log.d(TAG, "✅ SHOWING OVERLAY FOR: " + packageName);
 
         try {
             Intent overlayIntent = new Intent(this, TimeLimitBlockedActivity.class);
@@ -188,7 +221,7 @@ public class AppMonitoringService extends Service {
                             Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
 
             startActivity(overlayIntent);
-            Log.d(TAG, "✅ Overlay activity started for: " + packageName);
+            Log.d(TAG, "✅ Overlay activity started successfully");
         } catch (Exception e) {
             Log.e(TAG, "❌ Error starting overlay: " + e.getMessage(), e);
             isBlockingActive.set(false);
