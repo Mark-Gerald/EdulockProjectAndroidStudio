@@ -134,22 +134,20 @@ public class AppMonitoringService extends Service {
         Log.d(TAG, "Package: " + packageName);
         Log.d(TAG, "═══════════════════════════════════════════");
 
-        // ✅ CRITICAL FIX: If overlay is showing, ignore all app switches
+        // ✅ IGNORE SYSTEM APPS AND OUR OWN APP DURING APP SWITCH
+        if (isSystemOrOwnApp(packageName)) {
+            Log.d(TAG, "⏭️  Ignoring system/own app: " + packageName);
+            return;
+        }
+
+        // ✅ If overlay is currently showing, ignore
         if (isBlockingActive.get()) {
-            Log.d(TAG, "⏸️  Overlay is active - ignoring this app switch");
+            Log.d(TAG, "⏸��  Overlay is active - ignoring app switch for: " + packageName);
             return;
         }
 
         // Stop tracking previous app
         stopTrackingUsage();
-        isBlockingActive.set(false);
-
-        // Check if this is EduLock
-        if (packageName.equals(getPackageName())) {
-            Log.d(TAG, "✅ EduLock app detected - NOT blocking ourselves");
-            updateNotification();
-            return;
-        }
 
         // Check if app is restricted
         boolean isRestricted = restrictionManager.isAppRestricted(packageName);
@@ -183,6 +181,27 @@ public class AppMonitoringService extends Service {
         updateNotification();
     }
 
+    private boolean isSystemOrOwnApp(String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return true;
+        }
+
+        // Our own app
+        if (packageName.equals(getPackageName())) {
+            return true;
+        }
+
+        // System UI and other system apps
+        if (packageName.startsWith("com.android.") ||
+                packageName.startsWith("com.miui.") ||
+                packageName.startsWith("com.mi.") ||
+                packageName.equals("com.android.systemui")) {
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * Block the app by showing overlay
      */
@@ -203,8 +222,7 @@ public class AppMonitoringService extends Service {
             return;
         }
 
-        Log.d(TAG, "Target package: " + packageName);
-        Log.d(TAG, "Own package: " + getPackageName());
+        Log.d(TAG, "Target to block: " + packageName);
 
         // Check if trying to block ourselves
         if (packageName.equals(getPackageName())) {
@@ -212,13 +230,9 @@ public class AppMonitoringService extends Service {
             return;
         }
 
-        if (packageName.equals(lastBlockedApp) && isBlockingActive.get()) {
-            Log.d(TAG, "⏭️  Already blocking this app");
-            return;
-        }
-
-        lastBlockedApp = packageName;
+        // ✅ Set blocking ACTIVE for this specific app
         isBlockingActive.set(true);
+        lastBlockedApp = packageName;
 
         Log.d(TAG, "✅ SHOWING OVERLAY FOR: " + packageName);
 
@@ -229,19 +243,32 @@ public class AppMonitoringService extends Service {
                     Intent.FLAG_ACTIVITY_NEW_TASK |
                             Intent.FLAG_ACTIVITY_CLEAR_TOP |
                             Intent.FLAG_ACTIVITY_NO_ANIMATION |
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP |
-                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
             startActivity(overlayIntent);
-            Log.d(TAG, "✅ Overlay activity started successfully");
+            Log.d(TAG, "✅ Overlay started for: " + packageName);
 
-            // Reset blocking state after overlay shows
-            resetBlockingStateAfterDelay();
+            // Schedule reset after 3 seconds
+            scheduleBlockingReset(3000);
 
         } catch (Exception e) {
             Log.e(TAG, "❌ Error starting overlay: " + e.getMessage(), e);
             isBlockingActive.set(false);
         }
+    }
+
+    private void scheduleBlockingReset(long delayMs) {
+        new Thread(() -> {
+            try {
+                Thread.sleep(delayMs);
+                if (isBlockingActive.get()) {
+                    isBlockingActive.set(false);
+                    Log.d(TAG, "🔄 Blocking state reset after " + (delayMs/1000) + "s");
+                }
+            } catch (InterruptedException e) {
+                Log.e(TAG, "Sleep interrupted");
+            }
+        }).start();
     }
 
     /**

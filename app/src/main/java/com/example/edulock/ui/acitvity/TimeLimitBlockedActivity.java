@@ -55,25 +55,12 @@ public class TimeLimitBlockedActivity extends AppCompatActivity {
     private void sendToHome() {
         Log.d(TAG, "🏠 Sending to home screen...");
 
-        try {
-            // Reset blocking state in service
-            // (We'll handle this by having a delay before allowing new blocks)
+        Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+        homeIntent.addCategory(Intent.CATEGORY_HOME);
+        homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(homeIntent);
 
-            Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-            homeIntent.addCategory(Intent.CATEGORY_HOME);
-            homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
-                    Intent.FLAG_ACTIVITY_CLEAR_TASK |
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(homeIntent);
-
-            // Give it time to transition
-            Thread.sleep(500);
-
-            // Finish this activity
-            finish();
-        } catch (Exception e) {
-            Log.e(TAG, "Error sending to home: " + e.getMessage(), e);
-        }
+        finish();
     }
 
     @Override
