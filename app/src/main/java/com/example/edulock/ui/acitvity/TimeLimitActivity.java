@@ -284,11 +284,21 @@ public class TimeLimitActivity extends AppCompatActivity {
             String myPackageName = getPackageName();
 
             for (ApplicationInfo appInfo : apps) {
-                if (appInfo.packageName.equals(myPackageName)) continue;
+                // ✅ EXCLUDE OUR OWN APP
+                if (appInfo.packageName.equals(myPackageName)) {
+                    Log.d(TAG, "Skipping own app: " + myPackageName);
+                    continue;
+                }
 
-                if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) continue;
+                // Skip system apps
+                if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
+                    continue;
+                }
 
-                if (packageManager.getLaunchIntentForPackage(appInfo.packageName) == null) continue;
+                // Skip apps without launch intent
+                if (packageManager.getLaunchIntentForPackage(appInfo.packageName) == null) {
+                    continue;
+                }
 
                 try {
                     String appName = packageManager.getApplicationLabel(appInfo).toString();
@@ -504,7 +514,7 @@ public class TimeLimitActivity extends AppCompatActivity {
             Log.e("TimeLimitActivity", "❌ Error starting service: " + e.getMessage(), e);
         }
 
-        Toast.makeText(this, "✅ Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
 
         try {
             Thread.sleep(500);

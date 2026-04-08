@@ -20,6 +20,7 @@ import com.example.edulock.R;
 import com.example.edulock.manager.OverlayManager;
 import com.example.edulock.manager.RestrictionManager;
 import com.example.edulock.ui.acitvity.MainActivity;
+import com.example.edulock.ui.acitvity.TimeLimitBlockedActivity;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -156,9 +157,18 @@ public class AppMonitoringService extends Service {
     /**
      * Block the app by showing overlay
      */
+    /**
+     * Block the app by showing overlay
+     */
     private void blockApp(String packageName) {
         if (packageName.equals(lastBlockedApp) && isBlockingActive.get()) {
             Log.d(TAG, "⏭️  Already blocking this app, skipping");
+            return;
+        }
+
+        // Don't block EduLock itself
+        if (packageName.equals(getPackageName())) {
+            Log.d(TAG, "❌ Cannot block our own app!");
             return;
         }
 
@@ -167,18 +177,18 @@ public class AppMonitoringService extends Service {
 
         Log.d(TAG, "🛑 BLOCKING APP: " + packageName);
 
-        // Show overlay - use TimeLimitBlockedActivity
         try {
-            Intent overlayIntent = new Intent(this, com.example.edulock.ui.acitvity.TimeLimitBlockedActivity.class);
+            Intent overlayIntent = new Intent(this, TimeLimitBlockedActivity.class);
             overlayIntent.putExtra("package_name", packageName);
             overlayIntent.addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK |
                             Intent.FLAG_ACTIVITY_CLEAR_TOP |
                             Intent.FLAG_ACTIVITY_NO_ANIMATION |
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP |
+                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
 
             startActivity(overlayIntent);
-            Log.d(TAG, "✅ Overlay activity started");
+            Log.d(TAG, "✅ Overlay activity started for: " + packageName);
         } catch (Exception e) {
             Log.e(TAG, "❌ Error starting overlay: " + e.getMessage(), e);
             isBlockingActive.set(false);

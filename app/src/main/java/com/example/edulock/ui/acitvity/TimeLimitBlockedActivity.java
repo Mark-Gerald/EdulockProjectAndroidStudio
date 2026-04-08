@@ -5,6 +5,7 @@ import android.content.res.Configuration;
 import android.os.Bundle;
 import android.widget.Button;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -17,7 +18,7 @@ public class TimeLimitBlockedActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Log.d(TAG, "Created - orientation: " + getResources().getConfiguration().orientation);
+        Log.d(TAG, "🔒 Overlay activity created");
 
         // Set layout based on orientation
         setContentViewForOrientation();
@@ -40,28 +41,42 @@ public class TimeLimitBlockedActivity extends AppCompatActivity {
             Button goHomeBtn = findViewById(R.id.btn_go_home);
             if (goHomeBtn != null) {
                 goHomeBtn.setOnClickListener(v -> {
-                    Log.d(TAG, "Go home clicked");
+                    Log.d(TAG, "✅ Go home button clicked");
                     sendToHome();
                 });
+            } else {
+                Log.e(TAG, "❌ Button not found!");
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error setting up button: " + e.getMessage());
+            Log.e(TAG, "❌ Error setting up button: " + e.getMessage(), e);
         }
     }
 
     private void sendToHome() {
-        Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-        homeIntent.addCategory(Intent.CATEGORY_HOME);
-        homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        startActivity(homeIntent);
-        finish();
+        Log.d(TAG, "🏠 Sending to home screen...");
+
+        try {
+            Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+            homeIntent.addCategory(Intent.CATEGORY_HOME);
+            homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+                    Intent.FLAG_ACTIVITY_CLEAR_TASK |
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(homeIntent);
+
+            // Give it time to transition
+            Thread.sleep(500);
+
+            // Finish this activity
+            finish();
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending to home: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        Log.d(TAG, "Configuration changed to: " +
-                (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ? "LANDSCAPE" : "PORTRAIT"));
+        Log.d(TAG, "Configuration changed - updating layout");
 
         setContentViewForOrientation();
         setupHomeButton();
@@ -69,17 +84,32 @@ public class TimeLimitBlockedActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        Log.d(TAG, "Back pressed - ignoring");
-        // Intentionally do nothing to prevent dismissing the overlay
+        Log.d(TAG, "Back pressed - sending to home");
+        // Send to home instead of just blocking back
+        sendToHome();
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_HOME) {
+            Log.d(TAG, "Home key pressed");
+            // Let it go to home
+            return false;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        // Force return to this activity if user tries to switch away
-        Log.d(TAG, "Paused - bringing back to front");
-        Intent intent = new Intent(this, TimeLimitBlockedActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        startActivity(intent);
+        Log.d(TAG, "⏸️ Activity paused");
+
+        // If app tries to leave overlay, bring it back to front
+        if (!isFinishing()) {
+            Log.d(TAG, "Bringing overlay back to front");
+            Intent intent = new Intent(this, TimeLimitBlockedActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            startActivity(intent);
+        }
     }
 }
