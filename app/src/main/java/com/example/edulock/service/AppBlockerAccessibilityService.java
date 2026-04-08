@@ -2,7 +2,6 @@ package com.example.edulock.service;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -10,9 +9,6 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
 import com.example.edulock.manager.RestrictionManager;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Detects when restricted apps are launched

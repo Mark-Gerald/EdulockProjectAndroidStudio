@@ -1,13 +1,11 @@
 package com.example.edulock.manager;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
-import android.view.WindowManager;
 
-import com.example.edulock.ui.acitvity.OverlayBlockedActivity;
+import com.example.edulock.ui.acitvity.TimeLimitBlockedActivity;
 
 /**
  * Manages app blocking overlay display
@@ -45,7 +43,7 @@ public class OverlayManager {
                 // Small delay to ensure app is in foreground
                 Thread.sleep(OVERLAY_DELAY_MS);
 
-                Intent overlayIntent = new Intent(context, OverlayBlockedActivity.class);
+                Intent overlayIntent = new Intent(context, TimeLimitBlockedActivity.class);
                 overlayIntent.putExtra("package_name", packageName);
                 overlayIntent.addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK |
@@ -61,20 +59,5 @@ public class OverlayManager {
                 isOverlayShowing = false;
             }
         }).start();
-    }
-
-    /**
-     * Hide overlay
-     */
-    public void hideOverlay() {
-        isOverlayShowing = false;
-        Log.d(TAG, "Overlay hidden");
-    }
-
-    /**
-     * Check if overlay is currently showing
-     */
-    public boolean isShowingOverlay() {
-        return isOverlayShowing;
     }
 }

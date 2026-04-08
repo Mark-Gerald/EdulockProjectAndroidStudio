@@ -508,7 +508,6 @@ public class TimeLimitActivity extends AppCompatActivity {
         private final String appName;
         private final String packageName;
         private final Drawable appIcon;
-        private boolean selected;
 
         public AppInfo(String appName, String packageName, Drawable appIcon) {
             this.appName = appName;
@@ -526,14 +525,6 @@ public class TimeLimitActivity extends AppCompatActivity {
 
         public Drawable getAppIcon() {
             return appIcon;
-        }
-
-        public boolean isSelected() {
-            return selected;
-        }
-
-        public void setSelected(boolean selected) {
-            this.selected = selected;
         }
     }
 }

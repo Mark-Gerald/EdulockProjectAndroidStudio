@@ -70,16 +70,6 @@ public class RestrictionManager {
      * @param apps List of package names to restrict
      * @param timeLimitMinutes Time limit in minutes
      */
-    public void saveRestrictions(Set<String> apps, int timeLimitMinutes) {
-        SharedPreferences.Editor editor = prefs.edit();
-
-        editor.remove(KEY_RESTRICTED_APPS);
-        editor.putStringSet(KEY_RESTRICTED_APPS, new HashSet<>(apps));
-        editor.putInt(KEY_TIME_LIMIT, timeLimitMinutes);
-        editor.apply();
-
-        Log.d(TAG, "✅ Restrictions saved: " + apps.size() + " apps, " + timeLimitMinutes + " min limit");
-    }
 
     // ==================== USAGE TRACKING ====================
 
