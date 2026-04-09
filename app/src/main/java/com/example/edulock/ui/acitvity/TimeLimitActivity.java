@@ -233,25 +233,58 @@ public class TimeLimitActivity extends AppCompatActivity {
         CheckBox selectAllCheckBox = findViewById(R.id.select_all_checkbox);
 
         selectAllCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-
-            selectedApps.clear(); // 🔥 IMPORTANT
-
+            selectedApps.clear();
             for (int i = 0; i < appsContainer.getChildCount(); i++) {
                 View appView = appsContainer.getChildAt(i);
                 CheckBox appCheckBox = appView.findViewById(R.id.app_checkbox);
-
                 if (appCheckBox != null) {
                     appCheckBox.setChecked(isChecked);
-
                     if (isChecked) {
                         String packageName = userApps.get(i).getPackageName();
                         selectedApps.add(packageName);
                     }
                 }
             }
-
+            if (!isChecked) {
+                checkAndResetTimerIfNoApps(); // ← add this
+            }
             Log.d("TimeLimitActivity", "SelectAll apps: " + selectedApps.size());
         });
+    }
+
+    private void resetTimerToZero() {
+        LinearLayout container = findViewById(R.id.time_picker_container);
+        if (container != null && container.getChildCount() >= 5) {
+            try {
+                NumberPicker hourPicker = (NumberPicker) container.getChildAt(0);
+                NumberPicker minutePicker = (NumberPicker) container.getChildAt(2);
+                NumberPicker secondPicker = (NumberPicker) container.getChildAt(4);
+
+                // Animate: fade out, reset, fade in
+                container.animate()
+                        .alpha(0f)
+                        .setDuration(200)
+                        .withEndAction(() -> {
+                            hourPicker.setValue(0);
+                            minutePicker.setValue(0);
+                            secondPicker.setValue(0);
+                            selectedTimeLimit = 0;
+                            container.animate()
+                                    .alpha(1f)
+                                    .setDuration(200)
+                                    .start();
+                        })
+                        .start();
+            } catch (Exception e) {
+                Log.e(TAG, "Error resetting timer: " + e.getMessage());
+            }
+        }
+    }
+
+    private void checkAndResetTimerIfNoApps() {
+        if (selectedApps.isEmpty()) {
+            resetTimerToZero();
+        }
     }
 
     private void setupButtons() {
@@ -362,15 +395,14 @@ public class TimeLimitActivity extends AppCompatActivity {
             appCheckBox.setChecked(selectedApps.contains(app.getPackageName()));
 
             appCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-
                 if (isChecked) {
                     selectedApps.add(app.getPackageName());
                     Log.d("CHECKBOX", "ADDED: " + app.getPackageName());
                 } else {
                     selectedApps.remove(app.getPackageName());
                     Log.d("CHECKBOX", "REMOVED: " + app.getPackageName());
+                    checkAndResetTimerIfNoApps(); // ← add this
                 }
-
                 Log.d("CHECKBOX", "TOTAL: " + selectedApps.size());
             });
 
@@ -458,12 +490,6 @@ public class TimeLimitActivity extends AppCompatActivity {
         Set<String> selectedAppsSet = new HashSet<>(selectedApps);
         Log.d("TimeLimitActivity", "📱 Selected apps count: " + selectedAppsSet.size());
 
-        if (selectedAppsSet.isEmpty()) {
-            Log.e("TimeLimitActivity", "❌ NO APPS SELECTED!");
-            Toast.makeText(this, "Please select at least one app", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         for (String app : selectedAppsSet) {
             Log.d("TimeLimitActivity", "   📦 App: " + app);
         }
@@ -474,7 +500,6 @@ public class TimeLimitActivity extends AppCompatActivity {
             SharedPreferences.Editor editor = prefs.edit();
 
             // Clear and save
-            editor.clear();
             editor.putStringSet("restricted_apps", selectedAppsSet);
             editor.putInt("selected_time_limit", totalSeconds);
 
@@ -522,10 +547,12 @@ public class TimeLimitActivity extends AppCompatActivity {
         int displaySeconds = totalSeconds % 60;
         String timeDisplay = hours > 0 ? hours + "h " + minutes + "m" : minutes > 0 ? minutes + "m " + displaySeconds + "s" : displaySeconds + "s";
 
-        if (selectedAppsSet.size() > 1) {
-            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " apps, " + timeDisplay, Toast.LENGTH_SHORT).show();
+        if (selectedAppsSet.isEmpty()) {
+            Toast.makeText(this, "Restrictions cleared", Toast.LENGTH_SHORT).show();
+        } else if (selectedApps.size() > 1) {
+            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " apps, " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app, " + timeDisplay, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app, " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
         }
 
         try {

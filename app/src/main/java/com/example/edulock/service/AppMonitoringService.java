@@ -273,7 +273,7 @@ public class AppMonitoringService extends Service {
                 restrictionManager.addUsageTime(packageName, 1);
 
                 long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
-                int limitSeconds = restrictionManager.getTimeLimitSeconds() * 60;
+                int limitSeconds = restrictionManager.getTimeLimitSeconds();
 
                 Log.d(TAG, "⏱️ " + packageName + " | Used: " + usedSeconds + "s / Limit: " + limitSeconds + "s");
 
