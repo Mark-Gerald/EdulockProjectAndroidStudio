@@ -110,15 +110,6 @@ public class AppMonitoringService extends Service {
     /**
      * Handle when an app comes to foreground
      */
-    /**
-     * Handle when an app comes to foreground
-     */
-    /**
-     * Handle when an app comes to foreground
-     */
-    /**
-     * Handle when an app comes to foreground
-     */
     private void handleAppSwitch(String packageName) {
         if (packageName == null || packageName.isEmpty()) {
             Log.d(TAG, "❌ Package name is null/empty");
