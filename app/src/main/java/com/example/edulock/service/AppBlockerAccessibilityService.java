@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.example.edulock.manager.RestrictionManager;
 
@@ -31,18 +32,32 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // Only care about window state changes (app switches)
-        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        int eventType = event.getEventType();
+
+        // Only handle window state changes (app switches)
+        // Remove TYPE_WINDOW_CONTENT_CHANGED from this filter — it's noisy and not needed for detection
+        if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             return;
         }
 
-        String newApp = event.getPackageName().toString();
+        String newApp = null;
 
-        if (newApp == null || newApp.isEmpty()) {
-            return;
+        if (event.getPackageName() != null) {
+            newApp = event.getPackageName().toString();
         }
 
-        // If app changed, notify the monitoring service
+        // If systemui or null, check root window — landscape games trigger through systemui
+        if (newApp == null || newApp.equals("com.android.systemui") || newApp.isEmpty()) {
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root != null && root.getPackageName() != null) {
+                newApp = root.getPackageName().toString();
+                root.recycle();
+            }
+        }
+
+        if (newApp == null || newApp.isEmpty()) return;
+        if (newApp.equals("com.android.systemui")) return; // Still skip if systemui after root check
+
         if (!newApp.equals(currentForegroundApp)) {
             currentForegroundApp = newApp;
             Log.d(TAG, "📱 App detected: " + newApp);

@@ -172,6 +172,7 @@
             </intent-filter>
         </receiver>
 
+
         <!-- Watch if service stops -->
         <receiver
             android:name=".receiver.ServiceWatcherReceiver"
@@ -212,7 +213,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-
     </application>
 
 </manifest>

@@ -204,11 +204,12 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void loadSavedSettings() {
-        int savedTimeLimit = preferences.getInt(KEY_TIME_LIMIT, 0);
-        Log.d("TimeLimitActivity", "Loaded saved time limit: " + savedTimeLimit + " minutes");
+        int savedTotalSeconds = preferences.getInt(KEY_TIME_LIMIT, 0);
+        Log.d("TimeLimitActivity", "Loaded saved time limit: " + savedTotalSeconds + " minutes");
 
-        int hours = savedTimeLimit / 60;
-        int minutes = savedTimeLimit % 60;
+        int hours = savedTotalSeconds / 3600;
+        int minutes = (savedTotalSeconds % 3600) / 60;
+        int seconds = savedTotalSeconds % 60;
 
         LinearLayout container = findViewById(R.id.time_picker_container);
         if (container != null && container.getChildCount() >= 5) {
@@ -219,7 +220,7 @@ public class TimeLimitActivity extends AppCompatActivity {
 
                 hourPicker.setValue(hours);
                 minutePicker.setValue(minutes);
-                secondPicker.setValue(0);
+                secondPicker.setValue(seconds);
 
                 Log.d("TimeLimitActivity", "Set pickers to: " + hours + "h " + minutes + "m");
             } catch (Exception e) {
@@ -475,7 +476,7 @@ public class TimeLimitActivity extends AppCompatActivity {
             // Clear and save
             editor.clear();
             editor.putStringSet("restricted_apps", selectedAppsSet);
-            editor.putInt("selected_time_limit", selectedTimeLimit);
+            editor.putInt("selected_time_limit", totalSeconds);
 
             Log.d("TimeLimitActivity", "🔧 About to save to SharedPreferences...");
             boolean result = editor.commit();
@@ -516,10 +517,15 @@ public class TimeLimitActivity extends AppCompatActivity {
 
         //Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
 
-        if (selectedApps.size() > 1) {
-            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " apps, " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+        // Format for display
+        int displayMinutes = totalSeconds / 60;
+        int displaySeconds = totalSeconds % 60;
+        String timeDisplay = hours > 0 ? hours + "h " + minutes + "m" : minutes > 0 ? minutes + "m " + displaySeconds + "s" : displaySeconds + "s";
+
+        if (selectedAppsSet.size() > 1) {
+            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " apps, " + timeDisplay, Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app, " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app, " + timeDisplay, Toast.LENGTH_SHORT).show();
         }
 
         try {

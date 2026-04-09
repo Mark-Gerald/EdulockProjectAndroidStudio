@@ -48,6 +48,9 @@ public class AppMonitoringService extends Service {
     private String lastBlockedApp = "";
     private AtomicBoolean isBlockingActive = new AtomicBoolean(false);
 
+    private volatile long lastSettingsUpdateTime = 0;
+    private static final long SETTINGS_COOLDOWN_MS = 2000;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -85,16 +88,9 @@ public class AppMonitoringService extends Service {
         // Handle UPDATE_RESTRICTIONS - reload data
         if ("UPDATE_RESTRICTIONS".equals(action)) {
             Log.d(TAG, "🔄 UPDATE_RESTRICTIONS received - reloading everything");
-
-            // Create NEW instance to force reload from SharedPreferences
             restrictionManager = new RestrictionManager(this);
-
-            // Log what was loaded
-            int appCount = restrictionManager.getRestrictedApps().size();
-            int timeLimit = restrictionManager.getTimeLimitMinutes();
-            Log.d(TAG, "✅ Reloaded: " + appCount + " apps, " + timeLimit + " min limit");
-
-            // Update notification immediately
+            lastSettingsUpdateTime = System.currentTimeMillis(); // ← Add this
+            stopTrackingUsage(); // ← Stop any current tracking immediately
             updateNotification();
             return START_STICKY;
         }
@@ -140,6 +136,11 @@ public class AppMonitoringService extends Service {
             return;
         }
 
+        if (System.currentTimeMillis() - lastSettingsUpdateTime < SETTINGS_COOLDOWN_MS) {
+            Log.d(TAG, "⏭️  Ignoring app switch — within settings cooldown");
+            return;
+        }
+
         // ✅ If overlay is currently showing, ignore
         if (isBlockingActive.get()) {
             Log.d(TAG, "⏸��  Overlay is active - ignoring app switch for: " + packageName);
@@ -163,7 +164,7 @@ public class AppMonitoringService extends Service {
 
         // Get time info
         long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
-        int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
+        int limitSeconds = restrictionManager.getTimeLimitSeconds(); // Already in seconds — no * 60!
         boolean timeExceeded = restrictionManager.isTimeExceeded(packageName);
 
         Log.d(TAG, "⏱️  Used: " + usedSeconds + "s / Limit: " + limitSeconds + "s");
@@ -182,23 +183,12 @@ public class AppMonitoringService extends Service {
     }
 
     private boolean isSystemOrOwnApp(String packageName) {
-        if (packageName == null || packageName.isEmpty()) {
-            return true;
-        }
-
-        // Our own app
-        if (packageName.equals(getPackageName())) {
-            return true;
-        }
-
-        // System UI and other system apps
+        if (packageName == null || packageName.isEmpty()) return true;
+        if (packageName.equals(getPackageName())) return true;
         if (packageName.startsWith("com.android.") ||
                 packageName.startsWith("com.miui.") ||
                 packageName.startsWith("com.mi.") ||
-                packageName.equals("com.android.systemui")) {
-            return true;
-        }
-
+                packageName.equals("com.android.systemui")) return true;
         return false;
     }
 
@@ -265,16 +255,15 @@ public class AppMonitoringService extends Service {
      * Track usage time for an app session - increments every second
      */
     private void startTrackingUsage(String packageName) {
-        // Stop any previous tracking
         stopTrackingUsage();
-
         currentTrackedApp = packageName;
         Log.d(TAG, "▶️  Starting to track: " + packageName);
 
         trackingRunnable = new Runnable() {
+            private int confirmationTicks = 0; // ← add this
+
             @Override
             public void run() {
-                // Safety check - only track if this is still the current app
                 if (!currentTrackedApp.equals(packageName)) {
                     Log.d(TAG, "App changed, stopping tracking");
                     return;
@@ -284,7 +273,7 @@ public class AppMonitoringService extends Service {
                 restrictionManager.addUsageTime(packageName, 1);
 
                 long usedSeconds = restrictionManager.getTodayUsageSeconds(packageName);
-                int limitSeconds = restrictionManager.getTimeLimitMinutes() * 60;
+                int limitSeconds = restrictionManager.getTimeLimitSeconds() * 60;
 
                 Log.d(TAG, "⏱️ " + packageName + " | Used: " + usedSeconds + "s / Limit: " + limitSeconds + "s");
 
@@ -295,8 +284,7 @@ public class AppMonitoringService extends Service {
                     return; // Stop tracking
                 }
 
-                // Continue tracking every second
-                trackingHandler.postDelayed(this, 1000);
+                trackingHandler.postDelayed(trackingRunnable, 1000);
             }
         };
 
@@ -340,24 +328,24 @@ public class AppMonitoringService extends Service {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         int appCount = restrictionManager.getRestrictedApps().size();
-        int timeLimit = restrictionManager.getTimeLimitMinutes();
 
-        Log.d(TAG, "🔍 Creating notification - appCount=" + appCount + ", timeLimit=" + timeLimit);
+        Log.d(TAG, "🔍 Creating notification - appCount=" + appCount);
 
-        String contentText;
-        if (appCount == 0) {
-            contentText = "No restrictions active";
-        } else if (appCount == 1) {
-            contentText = "Monitoring 1 app with " + timeLimit + " min limit";
+        int timeLimitSecs = restrictionManager.getTimeLimitSeconds(); // Already seconds
+        String timeText;
+        if (timeLimitSecs >= 3600) {
+            timeText = (timeLimitSecs / 3600) + "h " + ((timeLimitSecs % 3600) / 60) + "m";
+        } else if (timeLimitSecs >= 60) {
+            timeText = (timeLimitSecs / 60) + " min";
         } else {
-            contentText = "Monitoring " + appCount + " apps with " + timeLimit + " min limit";
+            timeText = timeLimitSecs + " sec";
         }
 
-        Log.d(TAG, "📢 Notification text: " + contentText);
+        Log.d(TAG, "📢 Notification text: " + timeText);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("EduLock Active")
-                .setContentText(contentText)
+                .setContentText(timeText)
                 .setSmallIcon(R.drawable.ic_timer)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
