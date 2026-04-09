@@ -141,10 +141,16 @@ public class AppMonitoringService extends Service {
             return;
         }
 
-        // ✅ If overlay is currently showing, ignore
-        if (isBlockingActive.get()) {
-            Log.d(TAG, "⏸��  Overlay is active - ignoring app switch for: " + packageName);
+        // If same app is still being blocked, ignore it
+        if (isBlockingActive.get() && packageName.equals(lastBlockedApp)) {
+            Log.d(TAG, "⏸️  Still blocking same app, ignoring: " + packageName);
             return;
+        }
+
+        // If user switched to a DIFFERENT app, clear the blocking state and continue
+        if (isBlockingActive.get() && !packageName.equals(lastBlockedApp)) {
+            Log.d(TAG, "🔄 User switched to different app — resetting blocking state");
+            isBlockingActive.set(false);
         }
 
         // Stop tracking previous app
