@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -21,6 +22,10 @@ import com.example.edulock.manager.OverlayManager;
 import com.example.edulock.manager.RestrictionManager;
 import com.example.edulock.ui.acitvity.MainActivity;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * Monitoring service that:
  * 1. Receives app switch events from AccessibilityService
@@ -30,6 +35,7 @@ import com.example.edulock.ui.acitvity.MainActivity;
  * 5. Tracks usage time
  */
 public class AppMonitoringService extends Service {
+    private final Set<String> launcherPackages = new HashSet<>();
     private static final String TAG = "AppMonitoringService";
     private static final int NOTIFICATION_ID = 123;
     private static final String CHANNEL_ID = "EduLockChannel";
@@ -57,6 +63,7 @@ public class AppMonitoringService extends Service {
         // Initialize managers
         restrictionManager = new RestrictionManager(this);
         overlayManager = new OverlayManager(this);
+        cacheLauncherPackages();
 
         // Create notification channel
         createNotificationChannel();
@@ -110,6 +117,16 @@ public class AppMonitoringService extends Service {
         return START_STICKY;
     }
 
+    private void cacheLauncherPackages() {
+        Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+        homeIntent.addCategory(Intent.CATEGORY_HOME);
+        List<ResolveInfo> resolvers = getPackageManager().queryIntentActivities(homeIntent, 0);
+        for (android.content.pm.ResolveInfo info : resolvers) {
+            launcherPackages.add(info.activityInfo.packageName);
+            Log.d(TAG, "🏠 Launcher package cached: " + info.activityInfo.packageName);
+        }
+    }
+
     /**
      * Handle when an app comes to foreground
      */
@@ -124,7 +141,14 @@ public class AppMonitoringService extends Service {
         Log.d(TAG, "Package: " + packageName);
         Log.d(TAG, "═══════════════════════════════════════════");
 
-        // ✅ IGNORE SYSTEM APPS AND OUR OWN APP DURING APP SWITCH
+        // If it's the home screen or launcher, stop tracking and exit
+        if (launcherPackages.contains(packageName)) {
+            Log.d(TAG, "🏠 Home screen detected — stopping tracking");
+            stopTrackingUsage();
+            return;
+        }
+
+        // Ignore other system apps (system UI, notification shade, etc.) without stopping tracking
         if (isSystemOrOwnApp(packageName)) {
             Log.d(TAG, "⏭️  Ignoring system/own app: " + packageName);
             return;
