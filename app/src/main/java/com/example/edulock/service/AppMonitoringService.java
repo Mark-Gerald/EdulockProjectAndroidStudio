@@ -20,9 +20,6 @@ import com.example.edulock.R;
 import com.example.edulock.manager.OverlayManager;
 import com.example.edulock.manager.RestrictionManager;
 import com.example.edulock.ui.acitvity.MainActivity;
-import com.example.edulock.ui.acitvity.TimeLimitBlockedActivity;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Monitoring service that:
@@ -46,7 +43,6 @@ public class AppMonitoringService extends Service {
     private Runnable trackingRunnable;
 
     private String lastBlockedApp = "";
-    private AtomicBoolean isBlockingActive = new AtomicBoolean(false);
 
     private volatile long lastSettingsUpdateTime = 0;
     private static final long SETTINGS_COOLDOWN_MS = 2000;
@@ -87,10 +83,17 @@ public class AppMonitoringService extends Service {
 
         // Handle UPDATE_RESTRICTIONS - reload data
         if ("UPDATE_RESTRICTIONS".equals(action)) {
-            Log.d(TAG, "🔄 UPDATE_RESTRICTIONS received - reloading everything");
+            Log.d(TAG, "🔄 UPDATE_RESTRICTIONS received - reloading and resetting usage");
+
+            // Stop tracking whatever is currently being tracked
+            stopTrackingUsage();
+
+            // Create new manager and reset ALL usage so no app is pre-blocked
             restrictionManager = new RestrictionManager(this);
-            lastSettingsUpdateTime = System.currentTimeMillis(); // ← Add this
-            stopTrackingUsage(); // ← Stop any current tracking immediately
+            for (String pkg : restrictionManager.getRestrictedApps()) {
+                restrictionManager.resetAppUsage(pkg);
+            }
+
             updateNotification();
             return START_STICKY;
         }
@@ -130,18 +133,6 @@ public class AppMonitoringService extends Service {
         if (System.currentTimeMillis() - lastSettingsUpdateTime < SETTINGS_COOLDOWN_MS) {
             Log.d(TAG, "⏭️  Ignoring app switch — within settings cooldown");
             return;
-        }
-
-        // If same app is still being blocked, ignore it
-        if (isBlockingActive.get() && packageName.equals(lastBlockedApp)) {
-            Log.d(TAG, "⏸️  Still blocking same app, ignoring: " + packageName);
-            return;
-        }
-
-        // If user switched to a DIFFERENT app, clear the blocking state and continue
-        if (isBlockingActive.get() && !packageName.equals(lastBlockedApp)) {
-            Log.d(TAG, "🔄 User switched to different app — resetting blocking state");
-            isBlockingActive.set(false);
         }
 
         // Stop tracking previous app
@@ -208,9 +199,6 @@ public class AppMonitoringService extends Service {
             return;
         }
 
-        isBlockingActive.set(true);
-        lastBlockedApp = packageName;
-
         Log.d(TAG, "✅ SHOWING OVERLAY FOR: " + packageName);
 
         try {
@@ -226,26 +214,10 @@ public class AppMonitoringService extends Service {
             Log.d(TAG, "✅ Overlay service started for: " + packageName);
 
             // Schedule reset after 3 seconds
-            scheduleBlockingReset(3000);
 
         } catch (Exception e) {
             Log.e(TAG, "❌ Error starting overlay: " + e.getMessage(), e);
-            isBlockingActive.set(false);
         }
-    }
-
-    private void scheduleBlockingReset(long delayMs) {
-        new Thread(() -> {
-            try {
-                Thread.sleep(delayMs);
-                if (isBlockingActive.get()) {
-                    isBlockingActive.set(false);
-                    Log.d(TAG, "🔄 Blocking state reset after " + (delayMs/1000) + "s");
-                }
-            } catch (InterruptedException e) {
-                Log.e(TAG, "Sleep interrupted");
-            }
-        }).start();
     }
 
     /**
@@ -377,7 +349,6 @@ public class AppMonitoringService extends Service {
         new Thread(() -> {
             try {
                 Thread.sleep(2000); // Wait 2 seconds
-                isBlockingActive.set(false);
                 Log.d(TAG, "🔄 Blocking state reset");
             } catch (InterruptedException e) {
                 Log.e(TAG, "Sleep interrupted: " + e.getMessage());
@@ -394,7 +365,6 @@ public class AppMonitoringService extends Service {
     public void onDestroy() {
         super.onDestroy();
         stopTrackingUsage();
-        isBlockingActive.set(false);
         Log.d(TAG, "🔴 Service destroyed");
     }
 }

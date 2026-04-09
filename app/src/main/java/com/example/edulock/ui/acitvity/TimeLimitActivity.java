@@ -324,8 +324,11 @@ public class TimeLimitActivity extends AppCompatActivity {
                     continue;
                 }
 
-                // Skip system apps
-                if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
+                // Skip pure system apps, but allow apps that came pre-installed but were updated
+                // (e.g. YouTube, Chrome on Xiaomi/Samsung devices)
+                boolean isPureSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0
+                        && (appInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
+                if (isPureSystemApp) {
                     continue;
                 }
 
