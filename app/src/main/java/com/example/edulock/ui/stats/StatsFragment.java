@@ -264,11 +264,15 @@ public class StatsFragment extends Fragment {
     private boolean isSystemApp(String packageName) {
         try {
             ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
-            // System apps have FLAG_SYSTEM set
-            boolean isSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-            return isSystemApp;
+            boolean isSystem = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            boolean isUpdated = (appInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+            // Exclude pure built-in apps (system but never updated via Play Store)
+            if (isSystem && !isUpdated) return true;
+            // Exclude anything with no app drawer icon (background daemons/services)
+            boolean hasLauncher = packageManager.getLaunchIntentForPackage(packageName) != null;
+            return !hasLauncher;
         } catch (PackageManager.NameNotFoundException e) {
-            return false;
+            return true;
         }
     }
 
@@ -283,6 +287,13 @@ public class StatsFragment extends Fragment {
         // Process app usage list (SAME as Screen Time dashboard)
         for (Map.Entry<String, Long> entry : appUsageMap.entrySet()) {
             try {
+
+                String packageName = entry.getKey();
+                // Skip EduLock itself
+                if (packageName.equals(EDULOCK_PACKAGE)) continue;
+                // Skip system/built-in apps
+                if (isSystemApp(packageName)) continue;
+
                 ApplicationInfo appInfo = packageManager.getApplicationInfo(entry.getKey(), 0);
                 String appName = packageManager.getApplicationLabel(appInfo).toString();
 

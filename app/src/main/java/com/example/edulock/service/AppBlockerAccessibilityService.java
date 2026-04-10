@@ -17,6 +17,14 @@ import com.example.edulock.manager.RestrictionManager;
  */
 public class AppBlockerAccessibilityService extends AccessibilityService {
     private static final String TAG = "AppBlockerAccessibility";
+    public static boolean isConnected = false;
+
+    @Override
+    public void onServiceConnected() {
+        super.onServiceConnected();
+        isConnected = true;
+        Log.d(TAG, "✅ Accessibility service connected");
+    }
 
     private String currentForegroundApp = "";
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -104,6 +112,7 @@ public class AppBlockerAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
+        isConnected = false;
         Log.d(TAG, "🔴 AppBlockerAccessibilityService destroyed");
     }
 }

@@ -40,6 +40,7 @@ public class AppMonitoringService extends Service {
     private static final int NOTIFICATION_ID = 123;
     private static final String CHANNEL_ID = "EduLockChannel";
 
+
     private RestrictionManager restrictionManager;
     private OverlayManager overlayManager;
     private Handler mainHandler;

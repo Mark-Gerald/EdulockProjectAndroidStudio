@@ -1,5 +1,7 @@
 package com.example.edulock.ui.acitvity;
 
+import android.provider.Settings;
+import com.example.edulock.service.AppBlockerAccessibilityService;
 import com.bumptech.glide.Glide;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -73,6 +75,14 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_statistics_usage_data);
 
+        if (!Settings.canDrawOverlays(this) || !isAccessibilityServiceEnabled()) {
+            Intent permIntent = new Intent(this, settingsGrantPermission.class);
+            permIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(permIntent);
+            finish();
+            return;
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -145,6 +155,15 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
 
         fragmentManager = getSupportFragmentManager();
         openFragment(new StatsFragment());
+    }
+
+    private boolean isAccessibilityServiceEnabled() {
+        String serviceName = getPackageName() + "/" +
+                AppBlockerAccessibilityService.class.getCanonicalName();
+        String enabledServices = Settings.Secure.getString(
+                getContentResolver(),
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        return enabledServices != null && enabledServices.contains(serviceName);
     }
 
     private void showProfileDialog() {
