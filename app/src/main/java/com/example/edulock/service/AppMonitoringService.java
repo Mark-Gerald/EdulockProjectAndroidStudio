@@ -1,6 +1,7 @@
 package com.example.edulock.service;
 
 import android.annotation.SuppressLint;
+import java.util.Calendar;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,6 +9,8 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
 import android.os.Handler;
@@ -39,6 +42,7 @@ public class AppMonitoringService extends Service {
     private static final String TAG = "AppMonitoringService";
     private static final int NOTIFICATION_ID = 123;
     private static final String CHANNEL_ID = "EduLockChannel";
+    private int lastResetDay = -1;
 
 
     private RestrictionManager restrictionManager;
@@ -132,6 +136,8 @@ public class AppMonitoringService extends Service {
      * Handle when an app comes to foreground
      */
     private void handleAppSwitch(String packageName) {
+        checkMidnightReset();
+
         if (packageName == null || packageName.isEmpty()) {
             Log.d(TAG, "❌ Package name is null/empty");
             return;
@@ -198,11 +204,24 @@ public class AppMonitoringService extends Service {
     private boolean isSystemOrOwnApp(String packageName) {
         if (packageName == null || packageName.isEmpty()) return true;
         if (packageName.equals(getPackageName())) return true;
-        if (packageName.startsWith("com.android.") ||
-                packageName.startsWith("com.miui.") ||
-                packageName.startsWith("com.mi.") ||
-                packageName.equals("com.android.systemui")) return true;
-        return false;
+        // Always ignore system UI overlay
+        if (packageName.equals("com.android.systemui")) return true;
+
+        try {
+            ApplicationInfo ai = getPackageManager().getApplicationInfo(packageName, 0);
+            boolean isSystem = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            boolean isUpdated = (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+            boolean hasLauncher = getPackageManager().getLaunchIntentForPackage(packageName) != null;
+
+            // Ignore pure built-in system apps (not downloaded via Play Store)
+            if (isSystem && !isUpdated) return true;
+            // Ignore background services/daemons with no app drawer icon
+            if (!hasLauncher) return true;
+
+            return false;
+        } catch (PackageManager.NameNotFoundException e) {
+            return true; // Unknown — ignore it safely
+        }
     }
 
     private void blockApp(String packageName) {
@@ -364,6 +383,17 @@ public class AppMonitoringService extends Service {
                 manager.createNotificationChannel(channel);
             }
         }
+    }
+
+    private void checkMidnightReset() {
+        int currentDay = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
+        if (lastResetDay != -1 && lastResetDay != currentDay) {
+            Log.d(TAG, "🌅 New day — resetting all usage counters");
+            for (String pkg : restrictionManager.getRestrictedApps()) {
+                restrictionManager.resetAppUsage(pkg);
+            }
+        }
+        lastResetDay = currentDay;
     }
 
     /**
