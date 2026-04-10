@@ -197,7 +197,7 @@ public class TimeLimitActivity extends AppCompatActivity {
 
     private void updateSelectedTimeFromPicker(NumberPicker hours, NumberPicker minutes, NumberPicker seconds) {
         int totalSeconds = (hours.getValue() * 3600) + (minutes.getValue() * 60) + seconds.getValue();
-        selectedTimeLimit = totalSeconds / 60; // 0 is valid — means no restriction
+        selectedTimeLimit = totalSeconds; // 0 is valid — means no restriction
         Log.d(TAG, "Selected time: " + hours.getValue() + ":" +
                 String.format("%02d", minutes.getValue()) + ":" +
                 String.format("%02d", seconds.getValue()) + " = " + selectedTimeLimit + " minutes");
@@ -329,6 +329,19 @@ public class TimeLimitActivity extends AppCompatActivity {
                 boolean isPureSystemApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0
                         && (appInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0;
                 if (isPureSystemApp) {
+                    continue;
+                }
+
+                // Also exclude known system services that are updated via Play Store but
+                // are triggered by gestures/system events — not user-opened apps
+                String pkg = appInfo.packageName;
+                if (pkg.equals("com.google.android.googlequicksearchbox") ||
+                        pkg.startsWith("com.google.android.gms") ||
+                        pkg.startsWith("com.google.android.gsf") ||
+                        pkg.equals("com.google.android.inputmethod.latin") ||
+                        pkg.startsWith("com.miui.") ||
+                        pkg.startsWith("com.mi.") ||
+                        pkg.equals("com.android.systemui")) {
                     continue;
                 }
 

@@ -9,6 +9,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -238,20 +239,20 @@ public class AppMonitoringService extends Service {
     }
 
     private void cleanupSystemAppsFromRestrictedList() {
-        Set<String> restricted = new HashSet<>(restrictionManager.getRestrictedApps());
-        boolean changed = false;
+        SharedPreferences prefs = getSharedPreferences("app_restrictions", MODE_PRIVATE);
+        Set<String> restricted = prefs.getStringSet("restricted_apps", new HashSet<>());
 
+        Set<String> cleaned = new HashSet<>();
         for (String pkg : restricted) {
-            if (isSystemOrOwnApp(pkg)) {
+            if (!isSystemOrOwnApp(pkg)) {
+                cleaned.add(pkg);
+            } else {
                 Log.d(TAG, "🧹 Removing system app from restricted list: " + pkg);
-                restrictionManager.resetAppUsage(pkg);
-                changed = true;
             }
         }
 
-        if (changed) {
-            Log.d(TAG, "✅ Restricted list cleaned up");
-        }
+        prefs.edit().putStringSet("restricted_apps", cleaned).apply();
+        Log.d(TAG, "✅ Restricted list cleaned. Remaining: " + cleaned.size() + " apps");
     }
 
     private void blockApp(String packageName) {
