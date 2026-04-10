@@ -69,6 +69,7 @@ public class AppMonitoringService extends Service {
         restrictionManager = new RestrictionManager(this);
         overlayManager = new OverlayManager(this);
         cacheLauncherPackages();
+        cleanupSystemAppsFromRestrictedList();
 
         // Create notification channel
         createNotificationChannel();
@@ -204,8 +205,20 @@ public class AppMonitoringService extends Service {
     private boolean isSystemOrOwnApp(String packageName) {
         if (packageName == null || packageName.isEmpty()) return true;
         if (packageName.equals(getPackageName())) return true;
-        // Always ignore system UI overlay
-        if (packageName.equals("com.android.systemui")) return true;
+
+        // Always block known system namespaces — regardless of flags
+        if (packageName.startsWith("com.android.") ||
+                packageName.startsWith("com.miui.") ||
+                packageName.startsWith("com.mi.") ||
+                packageName.startsWith("android.") ||
+                packageName.equals("android") ||
+                packageName.equals("com.android.systemui")) return true;
+
+        // Block known Google system services that are NOT user apps
+        if (packageName.equals("com.google.android.googlequicksearchbox") ||
+                packageName.startsWith("com.google.android.gms") ||
+                packageName.startsWith("com.google.android.gsf") ||
+                packageName.equals("com.google.android.inputmethod.latin")) return true;
 
         try {
             ApplicationInfo ai = getPackageManager().getApplicationInfo(packageName, 0);
@@ -213,14 +226,31 @@ public class AppMonitoringService extends Service {
             boolean isUpdated = (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
             boolean hasLauncher = getPackageManager().getLaunchIntentForPackage(packageName) != null;
 
-            // Ignore pure built-in system apps (not downloaded via Play Store)
+            // Ignore pure built-in system apps (not installable from Play Store)
             if (isSystem && !isUpdated) return true;
-            // Ignore background services/daemons with no app drawer icon
+            // Ignore anything with no app drawer icon
             if (!hasLauncher) return true;
 
             return false;
         } catch (PackageManager.NameNotFoundException e) {
-            return true; // Unknown — ignore it safely
+            return true;
+        }
+    }
+
+    private void cleanupSystemAppsFromRestrictedList() {
+        Set<String> restricted = new HashSet<>(restrictionManager.getRestrictedApps());
+        boolean changed = false;
+
+        for (String pkg : restricted) {
+            if (isSystemOrOwnApp(pkg)) {
+                Log.d(TAG, "🧹 Removing system app from restricted list: " + pkg);
+                restrictionManager.resetAppUsage(pkg);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            Log.d(TAG, "✅ Restricted list cleaned up");
         }
     }
 
