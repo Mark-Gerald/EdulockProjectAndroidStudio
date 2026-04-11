@@ -25,6 +25,10 @@ import com.example.edulock.R;
 import com.example.edulock.manager.OverlayManager;
 import com.example.edulock.manager.RestrictionManager;
 import com.example.edulock.ui.acitvity.MainActivity;
+import com.example.edulock.ui.acitvity.login_register;
+import com.example.edulock.ui.acitvity.statistics_usage_data;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.HashSet;
 import java.util.List;
@@ -366,7 +370,10 @@ public class AppMonitoringService extends Service {
      * Create the persistent notification
      */
     private Notification createNotification() {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        Intent notificationIntent = new Intent(this,
+                currentUser != null ? statistics_usage_data.class : login_register.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this, 0, notificationIntent,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -389,7 +396,7 @@ public class AppMonitoringService extends Service {
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("EduLock Active")
-                .setContentText(timeText)
+                .setContentText(appCount + (appCount == 1 ? " app" : " apps") + " time limited · " + timeText)
                 .setSmallIcon(R.drawable.ic_timer)
                 .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_LOW)

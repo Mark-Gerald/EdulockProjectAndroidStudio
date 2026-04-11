@@ -132,12 +132,10 @@ public class UsageMonitorService extends Service {
                 .setContentTitle("Take a Break!")
                 .setContentText("You've used " + appName + " for " + hours + " hour(s)")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true) // Allows user to dismiss
-                .setOnlyAlertOnce(true); // Only alert once per notification
+                .setAutoCancel(true); // Allows user to dismiss
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        // Use package name hash as notification ID so each app gets its own notification
+        manager.cancel(packageName.hashCode()); // dismiss old one first so new one always pops up
         manager.notify(packageName.hashCode(), builder.build());
 
         Log.d(TAG, "Sent notification for " + appName);

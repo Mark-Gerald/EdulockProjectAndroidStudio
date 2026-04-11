@@ -558,17 +558,21 @@ public class TimeLimitActivity extends AppCompatActivity {
 
         //Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
 
-        // Format for display
-        int displayMinutes = totalSeconds / 60;
-        int displaySeconds = totalSeconds % 60;
-        String timeDisplay = hours > 0 ? hours + "h " + minutes + "m" : minutes > 0 ? minutes + "m " + displaySeconds + "s" : displaySeconds + "s";
+        // Build smart time display — only show non-zero units
+        StringBuilder timeParts = new StringBuilder();
+        if (hours > 0) timeParts.append(hours).append("h ");
+        if (minutes > 0) timeParts.append(minutes).append("m ");
+        if (seconds > 0) timeParts.append(seconds).append("s");
+        String timeDisplay = timeParts.toString().trim();
+        if (timeDisplay.isEmpty()) timeDisplay = "0s";
+
+        int appCount = selectedAppsSet.size();
+        String appText = appCount + (appCount == 1 ? " app" : " apps");
 
         if (selectedAppsSet.isEmpty()) {
             Toast.makeText(this, "Restrictions cleared", Toast.LENGTH_SHORT).show();
-        } else if (selectedApps.size() > 1) {
-            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " apps, " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app, " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Saved: " + appText + " limited to " + timeDisplay, Toast.LENGTH_LONG).show();
         }
 
         try {
