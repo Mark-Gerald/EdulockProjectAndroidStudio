@@ -20,4 +20,23 @@
     <color name="LightViolet">#cea6ef</color>
     <color name="purple_500">#9C27B0</color>
     <color name="card_bg">#1E1E1E</color>
+
+
+
+    <!-- ALL FOR RESTRICT PAGE -->
+    <color name="restrict_bg">#FFF7F4EE</color>            <!-- soft cream background -->
+    <color name="restrict_card_bg">#FFFFFFFF</color>
+    <color name="restrict_card_stroke">#FFEDE6DC</color>
+    <color name="restrict_text_primary">#FF1B1B1F</color>
+    <color name="restrict_text_secondary">#FF6B6B73</color>
+    <color name="restrict_accent">#FF3F6BF2</color>        <!-- friendly blue -->
+    <color name="restrict_accent_soft">#1A3F6BF2</color>
+    <color name="restrict_qr_frame">#FFF1EDE5</color>
+
+    <color name="restrict_success">#FF1B8A5A</color>
+    <color name="restrict_success_soft">#1A1B8A5A</color>
+    <color name="restrict_warning">#FFB7791F</color>
+    <color name="restrict_warning_soft">#1AB7791F</color>
+    <color name="restrict_neutral">#FF8A8A93</color>
+    <color name="restrict_neutral_soft">#14000000</color>
 </resources>

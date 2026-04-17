@@ -38,6 +38,9 @@ public class RestrictFragment extends Fragment {
     private DatabaseReference databaseRef;
     private ValueEventListener connectionListener;
     private OnDeviceControlListener controlListener;
+    private View qrPlaceholder;
+    private View statusChip;
+    private View statusDot;
 
     private String currentConnectionCode;
 
@@ -56,6 +59,29 @@ public class RestrictFragment extends Fragment {
         return view;
     }
 
+    private enum StatusKind { NEUTRAL, SUCCESS, WARNING }
+
+    private void setStatus(String text, StatusKind kind) {
+        statusTextView.setText(text);
+        int chipBg, dotBg;
+        switch (kind) {
+            case SUCCESS:
+                chipBg = R.drawable.bg_status_chip_success;
+                dotBg  = R.drawable.bg_status_dot_success;
+                break;
+            case WARNING:
+                chipBg = R.drawable.bg_status_chip_warning;
+                dotBg  = R.drawable.bg_status_dot_warning;
+                break;
+            default:
+                chipBg = R.drawable.bg_status_chip_neutral;
+                dotBg  = R.drawable.bg_status_dot_neutral;
+                break;
+        }
+        statusChip.setBackgroundResource(chipBg);
+        statusDot.setBackgroundResource(dotBg);
+    }
+
     private void initializeViews(View view) {
         qrCodeImageView = view.findViewById(R.id.qrCodeImageView);
         generateQrButton = view.findViewById(R.id.generateQrButton);
@@ -65,6 +91,14 @@ public class RestrictFragment extends Fragment {
         // Set initial state
         disconnectButton.setVisibility(View.GONE);
         statusTextView.setText("Generate QR code to connect to controller");
+
+        qrPlaceholder = view.findViewById(R.id.qrPlaceholder);
+        statusChip    = view.findViewById(R.id.statusChip);
+        statusDot     = view.findViewById(R.id.statusDot);
+
+        qrCodeImageView.setVisibility(View.GONE);
+        qrPlaceholder.setVisibility(View.VISIBLE);
+        setStatus("Waiting to connect", StatusKind.NEUTRAL);
     }
 
     private void setupFirebase() {
@@ -119,8 +153,10 @@ public class RestrictFragment extends Fragment {
             // Update UI first
             qrCodeImageView.setImageBitmap(bitmap);
             qrCodeImageView.setVisibility(View.VISIBLE);
+            qrPlaceholder.setVisibility(View.GONE);
             generateQrButton.setVisibility(View.GONE);
             disconnectButton.setVisibility(View.VISIBLE);
+            setStatus("Waiting for controller to scan…", StatusKind.WARNING);
 
             // Update Firebase with new connection code
             DatabaseReference newDeviceRef = databaseRef.child(currentConnectionCode);
@@ -158,7 +194,10 @@ public class RestrictFragment extends Fragment {
 
                 if (isConnected != null && isConnected) {
                     disconnectButton.setVisibility(View.VISIBLE);
-                    statusTextView.setText(isBlocked ? "Device is blocked" : "Device is unblocked");
+                    setStatus(
+                            isBlocked != null && isBlocked ? "Device is blocked" : "Connected — device unblocked",
+                            StatusKind.SUCCESS
+                    );
                 }
 
                 if (isBlocked != null && controlListener != null) {
@@ -201,9 +240,10 @@ public class RestrictFragment extends Fragment {
 
     private void resetViews() {
         qrCodeImageView.setVisibility(View.GONE);
+        qrPlaceholder.setVisibility(View.VISIBLE);
         generateQrButton.setVisibility(View.VISIBLE);
         disconnectButton.setVisibility(View.GONE);
-        statusTextView.setText("Generate QR code to connect to controller");
+        setStatus("Waiting to connect", StatusKind.NEUTRAL);
     }
 
     @Override
