@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/restrict_bg"
+    android:background="@color/background_dark"
     android:fillViewport="true">
 
     <LinearLayout
@@ -21,7 +21,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Device Control"
-            android:textColor="@color/restrict_text_primary"
+            android:textColor="@color/text_primary"
             android:textSize="28sp"
             android:fontFamily="sans-serif-medium"
             android:letterSpacing="-0.01"/>
