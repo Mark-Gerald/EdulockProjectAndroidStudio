@@ -1,75 +1,246 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#1E1E2E">
+    android:background="@color/mud"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingBottom="32dp">
 
+        <!-- Header Section -->
+        <LinearLayout
+            android:id="@+id/header_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Parental Controls"
+                android:textColor="@color/white"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.02" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Choose how you want to manage your child's screen time."
+                android:textColor="#AAAACC"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp"
+                android:lineSpacingMultiplier="1.4" />
+        </LinearLayout>
+
+        <!-- Section Label -->
         <TextView
+            android:id="@+id/section_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Choose a restriction type."
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:layout_marginBottom="24dp"/>
+            android:text="RESTRICTION TYPES"
+            android:textColor="#AAAACC"
+            android:textSize="11sp"
+            android:letterSpacing="0.12"
+            android:layout_marginStart="24dp"
+            android:layout_marginBottom="12dp" />
 
-        <!-- Variable Time Limits Option -->
-        <LinearLayout
+        <!-- Time Limit Card -->
+        <androidx.cardview.widget.CardView
             android:id="@+id/time_limit_option"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/rounded_purple_background"
-            android:padding="16dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="24dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="14dp"
             android:clickable="true"
-            android:focusable="true">
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            app:cardCornerRadius="20dp"
+            app:cardBackgroundColor="@color/MudPurple"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/DarkerViolet">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_timer"
-                app:tint="#FFFFFF" />
-
-            <TextView
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Variable time limits for sessions"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:layout_marginStart="16dp"/>
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:gravity="center_vertical">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_arrow_forward"
-                app:tint="#FFFFFF"/>
-        </LinearLayout>
+                <!-- Icon Background -->
+                <LinearLayout
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/rounded_purple_background"
+                    android:gravity="center">
 
-        <!-- Note Section -->
-        <TextView
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:src="@drawable/ic_timer"
+                        app:tint="@color/white" />
+                </LinearLayout>
+
+                <!-- Text Content -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Variable Time Limits"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Set daily usage limits per app"
+                        android:textColor="#AAAACC"
+                        android:textSize="13sp"
+                        android:layout_marginTop="3dp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#AAAACC" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Info Card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/info_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Note:"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:layout_marginTop="8dp"/>
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardBackgroundColor="@color/MudPurple"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/DarkerViolet">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="• Select the type of restriction you want to apply to the app\n• Options include set a weekly restriction, and Variable time limits for sessions\n• Ensure restrictions align with your desired monitoring goals\n• Changes can be adjusted or removed anytime through the control panel"
-            android:textColor="#FFFFFF"
-            android:layout_marginTop="8dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_dialog_info"
+                        app:tint="@color/DarkerViolet" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="How restrictions work"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="10dp" />
+                </LinearLayout>
+
+                <!-- Tip Row 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="10dp">
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginEnd="12dp"
+                        android:background="@color/DarkerViolet"
+                        android:backgroundTint="@color/DarkerViolet" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Pick a restriction type and select the apps you want to monitor."
+                        android:textColor="#AAAACC"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.35" />
+                </LinearLayout>
+
+                <!-- Tip Row 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="10dp">
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginEnd="12dp"
+                        android:background="@color/DarkerViolet" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Apps will be blocked automatically once their daily limit is reached."
+                        android:textColor="#AAAACC"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.35" />
+                </LinearLayout>
+
+                <!-- Tip Row 3 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginEnd="12dp"
+                        android:background="@color/DarkerViolet" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Restrictions reset every midnight and can be changed anytime."
+                        android:textColor="#AAAACC"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.35" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
     </LinearLayout>
-</LinearLayout>
+</ScrollView>
