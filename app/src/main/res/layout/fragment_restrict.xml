@@ -40,7 +40,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
-            app:cardBackgroundColor="@color/MudPurple"
+            app:cardBackgroundColor="@color/restrict_card_bg"
             app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/restrict_card_stroke"
