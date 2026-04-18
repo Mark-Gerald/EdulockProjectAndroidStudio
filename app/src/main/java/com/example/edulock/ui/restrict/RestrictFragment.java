@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.example.edulock.R;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -235,11 +236,17 @@ public class RestrictFragment extends Fragment {
 
             // Update Firebase with new connection code
             DatabaseReference newDeviceRef = databaseRef.child(currentConnectionCode);
+            FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+            final String userId = currentUser != null ? currentUser.getUid() : null;
+
             newDeviceRef.setValue(new DeviceData(
                     "Device " + deviceId.substring(0, 8),
-                    false,  // controllerConnected
-                    false   // isBlocked
+                    false,
+                    false
             )).addOnSuccessListener(aVoid -> {
+                if (userId != null) {
+                    newDeviceRef.child("userId").setValue(userId);  // ← this one line
+                }
                 startListeningForConnection(currentConnectionCode);
             }).addOnFailureListener(e -> {
                 Toast.makeText(getContext(), "Failed to register device", Toast.LENGTH_SHORT).show();
