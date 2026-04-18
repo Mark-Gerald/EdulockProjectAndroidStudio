@@ -12,6 +12,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.view.animation.AnimationUtils;
+import android.view.animation.Animation;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
+
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
@@ -80,6 +87,74 @@ public class RestrictFragment extends Fragment {
         }
         statusChip.setBackgroundResource(chipBg);
         statusDot.setBackgroundResource(dotBg);
+    }
+
+    private void animateQrIn() {
+        // QR image pops in with overshoot
+        Animation popIn = AnimationUtils.loadAnimation(getContext(), R.anim.qr_pop_in);
+        qrCodeImageView.startAnimation(popIn);
+
+        // Buttons slide up staggered
+        generateQrButton.setVisibility(View.GONE);
+        disconnectButton.setAlpha(0f);
+        disconnectButton.setTranslationY(40f);
+        disconnectButton.setVisibility(View.VISIBLE);
+        disconnectButton.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(300)
+                .setStartDelay(180)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+
+        // Status chip slides up
+        statusChip.setAlpha(0f);
+        statusChip.setTranslationY(24f);
+        statusChip.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(280)
+                .setStartDelay(120)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    private void animateResetIn() {
+        generateQrButton.setAlpha(0f);
+        generateQrButton.setVisibility(View.VISIBLE);
+        generateQrButton.animate()
+                .alpha(1f)
+                .setDuration(250)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    private void startStatusDotPulse() {
+        ObjectAnimator pulse  = ObjectAnimator.ofFloat(statusDot, "scaleX", 1f, 1.5f, 1f);
+        ObjectAnimator pulseY = ObjectAnimator.ofFloat(statusDot, "scaleY", 1f, 1.5f, 1f);
+
+        pulse.setRepeatCount(ObjectAnimator.INFINITE);
+        pulse.setRepeatMode(ObjectAnimator.RESTART);
+        pulse.setDuration(900);
+
+        pulseY.setRepeatCount(ObjectAnimator.INFINITE);
+        pulseY.setRepeatMode(ObjectAnimator.RESTART);
+        pulseY.setDuration(900);
+
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(pulse, pulseY);
+        set.start();
+
+        statusDot.setTag(set);
+    }
+
+    private void stopStatusDotPulse() {
+        Object tag = statusDot.getTag();
+        if (tag instanceof AnimatorSet) {
+            ((AnimatorSet) tag).cancel();
+            statusDot.setScaleX(1f);
+            statusDot.setScaleY(1f);
+        }
     }
 
     private void initializeViews(View view) {
@@ -154,9 +229,9 @@ public class RestrictFragment extends Fragment {
             qrCodeImageView.setImageBitmap(bitmap);
             qrCodeImageView.setVisibility(View.VISIBLE);
             qrPlaceholder.setVisibility(View.GONE);
-            generateQrButton.setVisibility(View.GONE);
-            disconnectButton.setVisibility(View.VISIBLE);
+            animateQrIn();
             setStatus("Waiting for controller to scan…", StatusKind.WARNING);
+            startStatusDotPulse();
 
             // Update Firebase with new connection code
             DatabaseReference newDeviceRef = databaseRef.child(currentConnectionCode);
@@ -194,6 +269,7 @@ public class RestrictFragment extends Fragment {
 
                 if (isConnected != null && isConnected) {
                     disconnectButton.setVisibility(View.VISIBLE);
+                    stopStatusDotPulse();
                     setStatus(
                             isBlocked != null && isBlocked ? "Device is blocked" : "Connected — device unblocked",
                             StatusKind.SUCCESS
@@ -239,11 +315,12 @@ public class RestrictFragment extends Fragment {
     }
 
     private void resetViews() {
+        stopStatusDotPulse();
         qrCodeImageView.setVisibility(View.GONE);
         qrPlaceholder.setVisibility(View.VISIBLE);
-        generateQrButton.setVisibility(View.VISIBLE);
         disconnectButton.setVisibility(View.GONE);
         setStatus("Waiting to connect", StatusKind.NEUTRAL);
+        animateResetIn();
     }
 
     @Override

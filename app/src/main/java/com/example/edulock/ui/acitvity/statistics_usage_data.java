@@ -133,7 +133,6 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         navigationView.setNavigationItemSelectedListener(this);
 
         bottomNavigationView = findViewById(R.id.bottom_navigation);
-        bottomNavigationView.setBackground(null);
 
         bottomNavigationView.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
             @Override
@@ -322,8 +321,12 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
         }
     }
 
-    private void openFragment(Fragment fragment) {
+    void openFragment(Fragment fragment) {
         FragmentTransaction transaction = fragmentManager.beginTransaction();
+        transaction.setCustomAnimations(
+                R.anim.fragment_fade_in,
+                R.anim.fragment_fade_out
+        );
         transaction.replace(R.id.fragment_container, fragment);
         transaction.commit();
     }
