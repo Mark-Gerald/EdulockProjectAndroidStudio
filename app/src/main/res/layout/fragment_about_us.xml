@@ -228,7 +228,7 @@
             </androidx.cardview.widget.CardView>
         </LinearLayout>
 
-        <!-- Row 3: Adrian + Chard (Adviser) -->
+        <!-- Row 3: Adrian + Nagrampa -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -312,7 +312,7 @@
             </androidx.cardview.widget.CardView>
         </LinearLayout>
 
-        <!-- Row 4: Pangilinan + Chard (Adviser) -->
+        <!-- Row 4: Pangilinan + Ramos -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -357,7 +357,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- James Andrei Nagrampa -->
+            <!-- Kenn Gabriel Ramos -->
             <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -379,14 +379,14 @@
                     <com.google.android.material.imageview.ShapeableImageView
                         android:layout_width="96dp"
                         android:layout_height="96dp"
-                        android:src="@drawable/nagrampa_andrei_james"
+                        android:src="@drawable/ramos_kenn_gabriel"
                         android:scaleType="centerCrop"
                         app:shapeAppearanceOverlay="@style/CircleImageView" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="James Andrei Nagrampa"
+                        android:text="Kenn Gabriel Ramos"
                         android:textColor="@color/white"
                         android:textSize="15sp"
                         android:textStyle="bold"
