@@ -62,7 +62,7 @@ public class BlockOverlayService extends Service {
     private static final String TAG               = "BlockOverlayService";
     private static final int    NOTIFICATION_ID   = 1;
     private static final String CHANNEL_ID        = "BlockOverlayChannel";
-    private static final long   HEARTBEAT_MS      = 15_000L;
+    private static final long   HEARTBEAT_MS      = 10_000L;
 
     private static final String PREFS_NAME        = "EduLock";
     private static final String KEY_CONN_CODE     = "connection_code";
