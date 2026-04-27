@@ -13,7 +13,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,8 +37,10 @@ public class register_signup extends AppCompatActivity {
     private EditText signupLastName, signupFirstName, signupEmail, signupPassword;
     private Button signupButton;
     private TextView loginRedirectText;
-    private RadioGroup userTypeRadioGroup;
-    private RadioButton selectedRadioButton;
+
+    // ✅ Individual RadioButtons — no RadioGroup needed
+    private RadioButton radioStudent, radioTeacher, radioParent, radioChild;
+    private RadioButton currentlySelectedRole = null;
 
     private boolean isGoogleSignInEmail = false;
 
@@ -50,62 +51,86 @@ public class register_signup extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_register_signup);
 
-        // Initialize Firebase instances
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // Initialize UI elements
         initializeUIElements();
-
         handleGoogleSignInData();
-
-        // Set up click listeners
         setupClickListeners();
 
         View root = findViewById(R.id.main);
-
         root.setAlpha(0f);
         root.setTranslationY(80f);
+        root.animate().alpha(1f).translationY(0f).setDuration(600).start();
 
-        root.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(600)
-                .start();
         animateFormElements();
     }
 
     private void animateFormElements() {
+        // ✅ Use userTypeContainer instead of the old userTypeRadioGroup
+        View userTypeContainer = findViewById(R.id.userTypeContainer);
 
-        View[] views = {signupFirstName, signupLastName, signupEmail, signupPassword, userTypeRadioGroup, signupButton, loginRedirectText};
+        View[] views = {
+                signupFirstName,
+                signupLastName,
+                signupEmail,
+                signupPassword,
+                userTypeContainer,   // ✅ fixed
+                signupButton,
+                loginRedirectText
+        };
 
         int delay = 0;
-
-        for(View v : views){
+        for (View v : views) {
             v.setAlpha(0f);
             v.setTranslationY(40f);
-
             v.animate()
                     .alpha(1f)
                     .translationY(0f)
                     .setStartDelay(delay)
                     .setDuration(400)
                     .start();
-
             delay += 80;
         }
     }
 
     private void initializeUIElements() {
-        signupFirstName = findViewById(R.id.signup_firstname);
-        signupLastName = findViewById(R.id.signup_lastname);
-        signupEmail = findViewById(R.id.signup_email);
-        signupPassword = findViewById(R.id.signup_password);
-        signupButton = findViewById(R.id.signup_button);
+        signupFirstName  = findViewById(R.id.signup_firstname);
+        signupLastName   = findViewById(R.id.signup_lastname);
+        signupEmail      = findViewById(R.id.signup_email);
+        signupPassword   = findViewById(R.id.signup_password);
+        signupButton     = findViewById(R.id.signup_button);
         loginRedirectText = findViewById(R.id.loginRedirectText);
-        userTypeRadioGroup = findViewById(R.id.radioGroup);
 
+        // ✅ Find individual RadioButtons from the 2x2 grid
+        radioStudent = findViewById(R.id.radioStudent);
+        radioTeacher = findViewById(R.id.radioTeacher);
+        radioParent  = findViewById(R.id.radioParent);
+        radioChild   = findViewById(R.id.radioChild);
+
+        setupRoleSelection();
         styleLoginRedirectText();
+    }
+
+    /**
+     * Simulates RadioGroup single-selection behavior across the 2x2 grid.
+     */
+    private void setupRoleSelection() {
+        RadioButton[] roles = {radioStudent, radioTeacher, radioParent, radioChild};
+
+        for (RadioButton rb : roles) {
+            rb.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    // Uncheck all others
+                    for (RadioButton other : roles) {
+                        if (other != buttonView) {
+                            other.setChecked(false);
+                        }
+                    }
+                    currentlySelectedRole = (RadioButton) buttonView;
+                }
+            });
+        }
     }
 
     private void handleGoogleSignInData() {
@@ -115,23 +140,19 @@ public class register_signup extends AppCompatActivity {
             String googleEmail = intent.getStringExtra("email");
             String googleDisplayName = intent.getStringExtra("displayName");
 
-            // Pre-fill email
             if (googleEmail != null && !googleEmail.isEmpty()) {
                 signupEmail.setText(googleEmail);
-                signupEmail.setEnabled(false); // Prevent editing
+                signupEmail.setEnabled(false);
                 isGoogleSignInEmail = true;
                 Log.d(TAG, "✅ Pre-filled email from Google: " + googleEmail);
             }
 
-            // Try to pre-fill name if available
             if (googleDisplayName != null && !googleDisplayName.isEmpty()) {
                 String[] nameParts = googleDisplayName.split(" ");
-
                 if (nameParts.length >= 1) {
                     signupFirstName.setText(nameParts[0]);
                     Log.d(TAG, "✅ Pre-filled first name: " + nameParts[0]);
                 }
-
                 if (nameParts.length >= 2) {
                     signupLastName.setText(nameParts[1]);
                     Log.d(TAG, "✅ Pre-filled last name: " + nameParts[1]);
@@ -143,15 +164,14 @@ public class register_signup extends AppCompatActivity {
     private void setupClickListeners() {
         signupButton.setOnClickListener(v -> {
             v.animate()
-                    .scaleX(0.95f)
-                    .scaleY(0.95f)
-                    .setDuration(100)
+                    .scaleX(0.95f).scaleY(0.95f).setDuration(100)
                     .withEndAction(() -> {
                         v.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
                         registerUser();
                     })
                     .start();
         });
+
         loginRedirectText.setOnClickListener(v -> {
             Intent intent = new Intent(register_signup.this, login_register.class);
             startActivity(intent);
@@ -166,26 +186,20 @@ public class register_signup extends AppCompatActivity {
         String userEmail = signupEmail.getText().toString().trim();
         String pass = signupPassword.getText().toString().trim();
 
-        // Validate inputs
         if (!validateInputs(userFname, userLname, userEmail, pass)) {
             return;
         }
 
-        // Get selected user type
-        int selectedId = userTypeRadioGroup.getCheckedRadioButtonId();
-        if (selectedId == -1) {
+        // ✅ Use currentlySelectedRole instead of RadioGroup.getCheckedRadioButtonId()
+        if (currentlySelectedRole == null) {
             Toast.makeText(this, "Please Select A User Type", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        selectedRadioButton = findViewById(selectedId);
-        String userType = selectedRadioButton.getText().toString();
-
-        // Disable button and show progress
+        String userType = currentlySelectedRole.getText().toString();
         signupButton.setEnabled(false);
 
         if (isGoogleSignInEmail) {
-            // Account already exists from Google Sign-In, just save profile to Firestore
             FirebaseUser user = auth.getCurrentUser();
             if (user != null) {
                 registerUserProfileOnly(user.getUid(), userFname, userLname, userEmail, userType);
@@ -194,7 +208,6 @@ public class register_signup extends AppCompatActivity {
                 Toast.makeText(this, "Error: User not authenticated", Toast.LENGTH_SHORT).show();
             }
         } else {
-            // Normal email/password registration
             createUserWithEmailAndPassword(userEmail, pass, userFname, userLname, userType);
         }
     }
@@ -219,7 +232,6 @@ public class register_signup extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         FirebaseUser user = auth.getCurrentUser();
                         if (user != null) {
-                            // Create user profile data
                             Map<String, Object> userData = new HashMap<>();
                             userData.put("firstName", userFname);
                             userData.put("lastName", userLname);
@@ -228,13 +240,13 @@ public class register_signup extends AppCompatActivity {
                             userData.put("createdAt", System.currentTimeMillis());
                             userData.put("profileImageUrl", "");
 
-                            // Save to Firestore with retry mechanism
                             saveUserDataWithRetry(user.getUid(), userData, 3);
                         }
                     } else {
                         signupButton.setEnabled(true);
-                        String errorMessage = task.getException() != null ?
-                                task.getException().getMessage() : "Registration failed";
+                        String errorMessage = task.getException() != null
+                                ? task.getException().getMessage()
+                                : "Registration failed";
                         Toast.makeText(register_signup.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });
@@ -246,11 +258,9 @@ public class register_signup extends AppCompatActivity {
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(register_signup.this, "Registration Successful", Toast.LENGTH_SHORT).show();
 
-                    // 🔥 NEW: Mark user as logged in
                     AuthStateManager authStateManager = new AuthStateManager(register_signup.this);
                     authStateManager.markUserLoggedIn(true);
 
-                    // Navigate to main activity
                     Intent intent = new Intent(register_signup.this, statistics_usage_data.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
@@ -258,7 +268,6 @@ public class register_signup extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     if (retriesLeft > 0) {
-                        // Retry saving data
                         saveUserDataWithRetry(userId, userData, retriesLeft - 1);
                     } else {
                         signupButton.setEnabled(true);
@@ -270,7 +279,6 @@ public class register_signup extends AppCompatActivity {
                         AuthStateManager authStateManager = new AuthStateManager(register_signup.this);
                         authStateManager.markUserLoggedIn(true);
 
-                        // Navigate anyway since authentication succeeded
                         Intent intent = new Intent(register_signup.this, statistics_usage_data.class);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);
@@ -292,7 +300,6 @@ public class register_signup extends AppCompatActivity {
             signupEmail.setError("Email Cannot Be Empty");
             return false;
         }
-
         if (!isGoogleSignInEmail) {
             if (password.isEmpty()) {
                 signupPassword.setError("Password Cannot Be Empty");

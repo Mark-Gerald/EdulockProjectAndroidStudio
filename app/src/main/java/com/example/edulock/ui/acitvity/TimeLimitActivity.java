@@ -30,6 +30,7 @@ import androidx.core.content.ContextCompat;
 import com.example.edulock.R;
 import com.example.edulock.service.AppBlockerAccessibilityService;
 import com.example.edulock.service.AppMonitoringService;
+import com.example.edulock.utils.PinSetupHelper;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -556,8 +557,6 @@ public class TimeLimitActivity extends AppCompatActivity {
             Log.e("TimeLimitActivity", "❌ Error starting service: " + e.getMessage(), e);
         }
 
-        //Toast.makeText(this, "Saved: " + selectedAppsSet.size() + " app(s), " + selectedTimeLimit + " min", Toast.LENGTH_SHORT).show();
-
         // Build smart time display — only show non-zero units
         StringBuilder timeParts = new StringBuilder();
         if (hours > 0) timeParts.append(hours).append("h ");
@@ -570,18 +569,19 @@ public class TimeLimitActivity extends AppCompatActivity {
         String appText = appCount + (appCount == 1 ? " app" : " apps");
 
         if (selectedAppsSet.isEmpty()) {
+            // No apps selected → clear PIN and finish
+            PinSetupHelper.clearPin(this);
             Toast.makeText(this, "Restrictions cleared", Toast.LENGTH_SHORT).show();
+            finish();
         } else {
+            // Apps are restricted → show PIN setup if not already set, then finish
             Toast.makeText(this, "Saved: " + appText + " limited to " + timeDisplay, Toast.LENGTH_LONG).show();
-        }
 
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Log.e("TimeLimitActivity", "Sleep interrupted");
+            PinSetupHelper.promptSetPinIfNeeded(this, () -> {
+                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+                finish();
+            });
         }
-
-        finish();
     }
 
     private static class AppInfo {

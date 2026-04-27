@@ -185,30 +185,73 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <RadioGroup
-                    android:id="@+id/radioGroup"
+                <!-- REPLACE your entire RadioGroup block with this -->
+
+                <LinearLayout
+                    android:id="@+id/userTypeContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:gravity="center"
-                    android:orientation="horizontal">
+                    android:orientation="vertical">
 
-                    <RadioButton
-                        android:id="@+id/radioStudent"
-                        android:layout_width="wrap_content"
+                    <!-- Row 1: Student + Teacher -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Student"
-                        android:textColor="@color/white"
-                        android:layout_marginEnd="40dp"/>
+                        android:orientation="horizontal">
 
-                    <RadioButton
-                        android:id="@+id/radioTeacher"
-                        android:layout_width="wrap_content"
+                        <RadioButton
+                            android:id="@+id/radioStudent"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Student"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:textColor="@color/white"/>
+
+                        <RadioButton
+                            android:id="@+id/radioTeacher"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Teacher"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:textColor="@color/white"/>
+
+                    </LinearLayout>
+
+                    <!-- Row 2: Parent + Child -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Teacher"
-                        android:textColor="@color/white"/>
+                        android:orientation="horizontal"
+                        android:layout_marginTop="4dp">
 
-                </RadioGroup>
+                        <RadioButton
+                            android:id="@+id/radioParent"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Parent"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:textColor="@color/white"/>
+
+                        <RadioButton
+                            android:id="@+id/radioChild"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Child"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:textColor="@color/white"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <Button
                     android:id="@+id/signup_button"
