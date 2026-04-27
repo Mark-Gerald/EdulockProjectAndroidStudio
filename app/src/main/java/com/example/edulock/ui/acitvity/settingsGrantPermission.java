@@ -1,6 +1,6 @@
 package com.example.edulock.ui.acitvity;
 
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -132,7 +132,7 @@ public class settingsGrantPermission extends AppCompatActivity {
     }
 
     private void showAccessibilityDialog() {
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, R.style.EduLock_AlertDialog)
                 .setTitle("Enable Accessibility")
                 .setMessage("EduLock needs accessibility permission to function properly")
                 .setPositiveButton("Settings", (dialog, which) -> {

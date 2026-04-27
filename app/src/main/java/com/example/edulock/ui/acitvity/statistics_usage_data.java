@@ -51,6 +51,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class statistics_usage_data extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, RestrictFragment.OnDeviceControlListener {
 
+    private Fragment currentFragment = null;
+
     DrawerLayout drawerLayout;
     BottomNavigationView bottomNavigationView;
     FragmentManager fragmentManager;
@@ -226,7 +228,7 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
 
         if (itemId == R.id.nav_logout) {  // Adjust the ID based on your menu
             // Show confirmation dialog
-            new AlertDialog.Builder(this)
+            new AlertDialog.Builder(this, R.style.EduLock_AlertDialog)
                     .setTitle("Log Out")
                     .setMessage("Are you sure you want to Log out?")
                     .setPositiveButton("Confirm", (dialog, which) -> {
@@ -248,8 +250,6 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
             openFragment(new AboutUsFragment());
         } else if (itemId == R.id.nav_contact_us) {
             openFragment(new ContactUsFragment());
-        } else if (itemId == R.id.nav_logout) {
-            showLogoutDialog();
         }
 
         drawerLayout.closeDrawer(GravityCompat.START);
@@ -298,7 +298,7 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
 
     // Method to show a logout confirmation dialog
     private void showLogoutDialog() {
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, R.style.EduLock_AlertDialog)
                 .setTitle("Log out")
                 .setMessage("Are you sure you want to Log out?")
                 .setPositiveButton("Confirm", (dialog, which) -> {
@@ -313,15 +313,33 @@ public class statistics_usage_data extends AppCompatActivity implements Navigati
     }
 
     @Override
+    @SuppressWarnings("MissingSuperCall")
     public void onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)){
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
+            return;
         }
+
+        if (!(currentFragment instanceof StatsFragment)) {
+            openFragment(new StatsFragment());
+            bottomNavigationView.setSelectedItemId(R.id.bottom_stats);
+            return;
+        }
+
+        new AlertDialog.Builder(this, R.style.EduLock_AlertDialog)
+                .setTitle("Log Out")
+                .setMessage("Are you sure you want to log out?")
+                .setPositiveButton("Confirm", (dialog, which) -> performCompleteLogout())
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .show();
+
+        // Satisfies the lint warning without actually going back
+        // super.onBackPressed() is intentionally NOT called above
+        // because we handle all cases manually
     }
 
     void openFragment(Fragment fragment) {
+        currentFragment = fragment; // track current fragment
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         transaction.setCustomAnimations(
                 R.anim.fragment_fade_in,

@@ -1,7 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.EduLock" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <style name="Base.Theme.EduLock" parent="Theme.Material3.DayNight.NoActionBar"/>
+
+    <!-- Force same dialog style in night mode -->
+    <style name="EduLock.AlertDialog" parent="Theme.MaterialComponents.Dialog.Alert">
+        <item name="android:background">#2D2D2D</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
+        <item name="buttonBarPositiveButtonStyle">@style/EduLock.DialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/EduLock.DialogButton.Negative</item>
     </style>
 </resources>

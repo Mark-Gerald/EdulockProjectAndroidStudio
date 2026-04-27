@@ -14,6 +14,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.example.edulock.R;
+
 /**
  * PinSetupHelper — handles creating and saving a 4-digit PIN for TimeLimitActivity.
  *
@@ -53,7 +55,7 @@ public class PinSetupHelper {
      * Forces a new PIN creation dialog (e.g. for "Change PIN" feature).
      */
     public static void showPinCreationDialog(Context context, Runnable onComplete) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.EduLock_AlertDialog);
 
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);

@@ -101,7 +101,7 @@ public class ControlFragment extends Fragment {
     private void showPinVerificationDialog(String correctPin) {
         if (getContext() == null) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext(), R.style.EduLock_AlertDialog);
 
         // --- Build custom PIN input layout ---
         LinearLayout layout = new LinearLayout(requireContext());
@@ -110,7 +110,7 @@ public class ControlFragment extends Fragment {
         layout.setPadding(60, 40, 60, 20);
 
         TextView title = new TextView(requireContext());
-        title.setText("🔒 Enter PIN");
+        title.setText("Enter PIN");
         title.setTextSize(20f);
         title.setGravity(Gravity.CENTER);
         title.setPadding(0, 0, 0, 8);

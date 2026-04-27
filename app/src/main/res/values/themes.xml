@@ -46,4 +46,23 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
     </style>
+
+    <!-- Consistent dialog theme regardless of device/dark mode -->
+    <style name="EduLock.AlertDialog" parent="Theme.MaterialComponents.Dialog.Alert">
+        <item name="android:background">#2D2D2D</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
+        <item name="buttonBarPositiveButtonStyle">@style/EduLock.DialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/EduLock.DialogButton.Negative</item>
+    </style>
+
+    <style name="EduLock.DialogButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">#BB86FC</item>   <!-- purple accent -->
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="EduLock.DialogButton.Negative">
+        <item name="android:textColor">#AAAAAA</item>
+        <item name="android:textStyle">normal</item>
+    </style>
 </resources>

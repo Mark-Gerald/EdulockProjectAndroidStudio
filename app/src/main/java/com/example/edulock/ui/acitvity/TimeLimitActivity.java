@@ -4,7 +4,7 @@ import android.graphics.Color;
 import android.os.Build;
 import android.provider.Settings;
 import android.text.TextUtils;
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -101,7 +101,7 @@ public class TimeLimitActivity extends AppCompatActivity {
     }
 
     private void showAccessibilityDialog() {
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, R.style.EduLock_AlertDialog)
                 .setTitle("Permission Required")
                 .setMessage("Please enable the accessibility service for EduLock to work properly")
                 .setPositiveButton("Settings", (dialog, which) -> {
