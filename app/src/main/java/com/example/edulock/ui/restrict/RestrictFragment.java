@@ -452,8 +452,6 @@ public class RestrictFragment extends Fragment {
     private void applyPhase(boolean blocked) {
         isCurrentlyBlocked = blocked;
 
-        prefs().edit().putBoolean("is_blocked", blocked).apply();
-
         if (blocked) {
             // ── Phase 4: Connected – Device Blocked ───────────────────
             setStatus("Connected — device blocked", StatusKind.BLOCKED);
