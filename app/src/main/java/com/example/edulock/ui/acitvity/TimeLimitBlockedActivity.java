@@ -74,6 +74,7 @@ public class TimeLimitBlockedActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        super.onBackPressed();
         Log.d(TAG, "Back pressed - sending to home");
         // Send to home instead of just blocking back
         sendToHome();

@@ -18,7 +18,6 @@ import android.animation.ObjectAnimator;
 import android.view.animation.AnimationUtils;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -40,9 +39,15 @@ import java.util.UUID;
 
 public class RestrictFragment extends Fragment {
 
-    // ─── Persistence keys ───────────────────────────────────────────────
-    private static final String PREFS_NAME      = "EduLock";
-    private static final String KEY_CONN_CODE   = "connection_code";
+    private static final String PREFS_NAME    = "EduLock";
+    private static final String KEY_CONN_CODE = "connection_code";
+
+    // ── Phase tracking ─────────────────────────────────────────────────
+    // Prevents the immediate Firebase echo from overwriting Phase 2.
+    // Set to true only after the listener has been armed. The first
+    // snapshot that arrives is ALWAYS the locally-written value (Phase 2),
+    // so we skip it and wait for a real controller update.
+    private boolean listenerArmed = false;
 
     private ImageView qrCodeImageView;
     private Button generateQrButton;
@@ -58,31 +63,34 @@ public class RestrictFragment extends Fragment {
 
     private String currentConnectionCode;
 
+    // ── Phase 4: track blocked state to disable disconnect ────────────
+    private boolean isCurrentlyBlocked = false;
+
     public interface OnDeviceControlListener {
         void onDeviceControlStatusChanged(boolean isBlocked);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_restrict, container, false);
-
         initializeViews(view);
         setupFirebase();
         setupListeners();
-
-        // Try to restore a previously generated QR / active session.
-        // This is what lets the QR survive an app close, swipe-away, or
-        // "clear from recents". Only the user's Disconnect button or the
-        // teacher's Disconnect on the controller will wipe this state.
         restoreSavedConnection();
-
         return view;
     }
 
-    private enum StatusKind { NEUTRAL, SUCCESS, WARNING }
+    // ═══════════════════════════════════════════════════════════════════
+    //  STATUS CHIP
+    // ═══════════════════════════════════════════════════════════════════
+
+    private enum StatusKind { NEUTRAL, SUCCESS, WARNING, BLOCKED }
 
     private void setStatus(String text, StatusKind kind) {
+        if (!isAdded()) return;
         statusTextView.setText(text);
+
         int chipBg, dotBg;
         switch (kind) {
             case SUCCESS:
@@ -93,6 +101,12 @@ public class RestrictFragment extends Fragment {
                 chipBg = R.drawable.bg_status_chip_warning;
                 dotBg  = R.drawable.bg_status_dot_warning;
                 break;
+            case BLOCKED:
+                // Use your "danger/red" drawable here – or reuse warning if you
+                // don't have one yet. Add bg_status_chip_blocked to your drawables.
+                chipBg = R.drawable.bg_status_chip_warning; // replace with _blocked
+                dotBg  = R.drawable.bg_status_dot_warning;  // replace with _blocked
+                break;
             default:
                 chipBg = R.drawable.bg_status_chip_neutral;
                 dotBg  = R.drawable.bg_status_dot_neutral;
@@ -101,6 +115,10 @@ public class RestrictFragment extends Fragment {
         statusChip.setBackgroundResource(chipBg);
         statusDot.setBackgroundResource(dotBg);
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  ANIMATIONS
+    // ═══════════════════════════════════════════════════════════════════
 
     private void animateQrIn() {
         Animation popIn = AnimationUtils.loadAnimation(getContext(), R.anim.qr_pop_in);
@@ -111,50 +129,37 @@ public class RestrictFragment extends Fragment {
         disconnectButton.setTranslationY(40f);
         disconnectButton.setVisibility(View.VISIBLE);
         disconnectButton.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(300)
-                .setStartDelay(180)
-                .setInterpolator(new DecelerateInterpolator())
-                .start();
+                .alpha(1f).translationY(0f)
+                .setDuration(300).setStartDelay(180)
+                .setInterpolator(new DecelerateInterpolator()).start();
 
         statusChip.setAlpha(0f);
         statusChip.setTranslationY(24f);
         statusChip.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(280)
-                .setStartDelay(120)
-                .setInterpolator(new DecelerateInterpolator())
-                .start();
+                .alpha(1f).translationY(0f)
+                .setDuration(280).setStartDelay(120)
+                .setInterpolator(new DecelerateInterpolator()).start();
     }
 
     private void animateResetIn() {
         generateQrButton.setAlpha(0f);
         generateQrButton.setVisibility(View.VISIBLE);
-        generateQrButton.animate()
-                .alpha(1f)
-                .setDuration(250)
-                .setInterpolator(new DecelerateInterpolator())
-                .start();
+        generateQrButton.animate().alpha(1f).setDuration(250)
+                .setInterpolator(new DecelerateInterpolator()).start();
     }
 
     private void startStatusDotPulse() {
         ObjectAnimator pulse  = ObjectAnimator.ofFloat(statusDot, "scaleX", 1f, 1.5f, 1f);
         ObjectAnimator pulseY = ObjectAnimator.ofFloat(statusDot, "scaleY", 1f, 1.5f, 1f);
-
         pulse.setRepeatCount(ObjectAnimator.INFINITE);
         pulse.setRepeatMode(ObjectAnimator.RESTART);
         pulse.setDuration(900);
-
         pulseY.setRepeatCount(ObjectAnimator.INFINITE);
         pulseY.setRepeatMode(ObjectAnimator.RESTART);
         pulseY.setDuration(900);
-
         AnimatorSet set = new AnimatorSet();
         set.playTogether(pulse, pulseY);
         set.start();
-
         statusDot.setTag(set);
     }
 
@@ -167,45 +172,48 @@ public class RestrictFragment extends Fragment {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════════════════════════════
+
     private void initializeViews(View view) {
-        qrCodeImageView = view.findViewById(R.id.qrCodeImageView);
+        qrCodeImageView  = view.findViewById(R.id.qrCodeImageView);
         generateQrButton = view.findViewById(R.id.generateQrButton);
         disconnectButton = view.findViewById(R.id.disconnectButton);
-        statusTextView = view.findViewById(R.id.statusTextView);
+        statusTextView   = view.findViewById(R.id.statusTextView);
+        qrPlaceholder    = view.findViewById(R.id.qrPlaceholder);
+        statusChip       = view.findViewById(R.id.statusChip);
+        statusDot        = view.findViewById(R.id.statusDot);
 
         disconnectButton.setVisibility(View.GONE);
-        statusTextView.setText("Generate QR code to connect to controller");
-
-        qrPlaceholder = view.findViewById(R.id.qrPlaceholder);
-        statusChip    = view.findViewById(R.id.statusChip);
-        statusDot     = view.findViewById(R.id.statusDot);
-
         qrCodeImageView.setVisibility(View.GONE);
         qrPlaceholder.setVisibility(View.VISIBLE);
         setStatus("Waiting to connect", StatusKind.NEUTRAL);
     }
 
-    /**
-     * IMPORTANT: We no longer call setValue(...) on registered_devices/{deviceId}
-     * here. That call was overwriting controllerConnected / isBlocked back to
-     * false every single time the app launched, which is why a blocked phone
-     * "forgot" it was blocked after being killed.
-     *
-     * We only obtain the database reference now. The actual node is created
-     * in generateAndDisplayQRCode() under the connection-code key, and is
-     * restored (read-only, NOT overwritten) by restoreSavedConnection().
-     */
     private void setupFirebase() {
-        deviceId = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        deviceId    = Settings.Secure.getString(
+                getContext().getContentResolver(), Settings.Secure.ANDROID_ID);
         databaseRef = FirebaseDatabase.getInstance().getReference("registered_devices");
     }
 
     private void setupListeners() {
         generateQrButton.setOnClickListener(v -> generateAndDisplayQRCode());
-        disconnectButton.setOnClickListener(v -> disconnectController());
+        disconnectButton.setOnClickListener(v -> {
+            // ── Phase 4 guard: block cannot be bypassed via disconnect ──
+            if (isCurrentlyBlocked) {
+                Toast.makeText(getContext(),
+                        "Cannot disconnect while device is blocked.",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            disconnectController();
+        });
     }
 
-    // ─── Persistence helpers ───────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    //  PERSISTENCE
+    // ═══════════════════════════════════════════════════════════════════
 
     private SharedPreferences prefs() {
         return getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -223,22 +231,10 @@ public class RestrictFragment extends Fragment {
         return prefs().getString(KEY_CONN_CODE, null);
     }
 
-    private String getStoredDeviceId() {
-        String storedId = prefs().getString("device_id", null);
-        if (storedId == null) {
-            storedId = UUID.randomUUID().toString();
-            prefs().edit().putString("device_id", storedId).apply();
-        }
-        return storedId;
-    }
+    // ═══════════════════════════════════════════════════════════════════
+    //  RESTORE SAVED SESSION
+    // ═══════════════════════════════════════════════════════════════════
 
-    /**
-     * Restore a previously saved QR session if one exists in Firebase.
-     * Three possible outcomes:
-     *   1) Saved code exists AND node still exists in Firebase  → rebuild QR + reattach listener.
-     *   2) Saved code exists but node was DELETED by the teacher → forget it, show fresh "generate" UI.
-     *   3) No saved code at all                                  → do nothing.
-     */
     private void restoreSavedConnection() {
         final String saved = getStoredConnectionCode();
         if (saved == null) return;
@@ -249,8 +245,9 @@ public class RestrictFragment extends Fragment {
         savedRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!isAdded()) return;
+
                 if (!snapshot.exists()) {
-                    // Teacher disconnected on the controller side — wipe local state.
                     clearSavedConnectionCode();
                     return;
                 }
@@ -258,9 +255,9 @@ public class RestrictFragment extends Fragment {
                 try {
                     currentConnectionCode = saved;
 
-                    // Rebuild the QR bitmap from the saved code.
                     MultiFormatWriter writer = new MultiFormatWriter();
-                    BitMatrix bitMatrix = writer.encode(saved, BarcodeFormat.QR_CODE, 500, 500);
+                    BitMatrix bitMatrix = writer.encode(
+                            saved, BarcodeFormat.QR_CODE, 500, 500);
                     Bitmap bitmap = new BarcodeEncoder().createBitmap(bitMatrix);
 
                     qrCodeImageView.setImageBitmap(bitmap);
@@ -269,166 +266,230 @@ public class RestrictFragment extends Fragment {
                     generateQrButton.setVisibility(View.GONE);
                     disconnectButton.setVisibility(View.VISIBLE);
 
-                    Boolean connected = snapshot.child("controllerConnected").getValue(Boolean.class);
-                    Boolean blocked   = snapshot.child("isBlocked").getValue(Boolean.class);
+                    Boolean connected = snapshot.child("controllerConnected")
+                            .getValue(Boolean.class);
+                    Boolean blocked   = snapshot.child("isBlocked")
+                            .getValue(Boolean.class);
 
                     if (Boolean.TRUE.equals(connected)) {
                         stopStatusDotPulse();
-                        setStatus(
-                                Boolean.TRUE.equals(blocked)
-                                        ? "Device is blocked"
-                                        : "Connected — device unblocked",
-                                StatusKind.SUCCESS
-                        );
-                        if (controlListener != null) {
-                            controlListener.onDeviceControlStatusChanged(Boolean.TRUE.equals(blocked));
-                        }
+                        applyPhase(Boolean.TRUE.equals(blocked));
                     } else {
+                        // Phase 2 – waiting for controller
                         setStatus("Waiting for controller to scan…", StatusKind.WARNING);
                         startStatusDotPulse();
                     }
 
-                    // Re-arm the auto-disconnect on socket loss.
-                    // Only flip controllerConnected → false. We DO NOT touch isBlocked
-                    // here; the teacher controls that and it must persist.
-                    savedRef.child("controllerConnected").onDisconnect().setValue(false);
+                    savedRef.child("controllerConnected")
+                            .onDisconnect().setValue(false);
 
-                    // Make sure controllerConnected reflects reality right now.
-                    // If we were online before being killed, Firebase already flipped
-                    // it to false via onDisconnect. The teacher's UI listener will
-                    // detect us coming back online once the controller pings.
-
+                    // Mark armed BEFORE attaching the live listener so the
+                    // first echo is treated as real data (this is a restore,
+                    // not a fresh generate – the data already reflects truth).
+                    listenerArmed = true;
                     startListeningForConnection(saved);
+
                 } catch (Exception e) {
                     clearSavedConnectionCode();
                 }
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) { /* ignore */ }
+            public void onCancelled(@NonNull DatabaseError error) { }
         });
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  GENERATE QR  (Phase 1 → Phase 2)
+    // ═══════════════════════════════════════════════════════════════════
+
     private void generateAndDisplayQRCode() {
         try {
-            currentConnectionCode = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            currentConnectionCode = UUID.randomUUID()
+                    .toString().replace("-", "").substring(0, 16);
 
-            MultiFormatWriter multiFormatWriter = new MultiFormatWriter();
-            BitMatrix bitMatrix = multiFormatWriter.encode(currentConnectionCode, BarcodeFormat.QR_CODE, 500, 500);
-            BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
-            Bitmap bitmap = barcodeEncoder.createBitmap(bitMatrix);
+            MultiFormatWriter writer = new MultiFormatWriter();
+            BitMatrix bitMatrix = writer.encode(
+                    currentConnectionCode, BarcodeFormat.QR_CODE, 500, 500);
+            Bitmap bitmap = new BarcodeEncoder().createBitmap(bitMatrix);
 
             qrCodeImageView.setImageBitmap(bitmap);
             qrCodeImageView.setVisibility(View.VISIBLE);
             qrPlaceholder.setVisibility(View.GONE);
             animateQrIn();
+
+            // ── Phase 2 ──────────────────────────────────────────────
             setStatus("Waiting for controller to scan…", StatusKind.WARNING);
             startStatusDotPulse();
+            // listenerArmed = false here; the first Firebase echo will be
+            // skipped, keeping us visually in Phase 2.
+            listenerArmed = false;
 
             final DatabaseReference newDeviceRef = databaseRef.child(currentConnectionCode);
             newDeviceRef.keepSynced(true);
 
-            FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+            FirebaseUser currentUser =
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
             final String userId = currentUser != null ? currentUser.getUid() : null;
 
             newDeviceRef.setValue(new DeviceData(
-                    "Device " + deviceId.substring(0, 8),
-                    false,
-                    false
-            )).addOnSuccessListener(aVoid -> {
-                if (userId != null) {
-                    newDeviceRef.child("userId").setValue(userId);
-                }
-                // Stable identifier — the website uses this to detect that a
-                // reconnecting QR belongs to the SAME phone, so it can revive
-                // the offline row instead of creating a duplicate.
-                newDeviceRef.child("hardwareId").setValue(deviceId);
+                    "Device " + deviceId.substring(0, 8), false, false)
+            ).addOnSuccessListener(aVoid -> {
+                if (!isAdded()) return;
 
-                // Auto-mark the controller as disconnected if the network drops.
-                // We deliberately do NOT touch isBlocked here — the block state
-                // must persist until the teacher unblocks or disconnects.
+                if (userId != null) newDeviceRef.child("userId").setValue(userId);
+                newDeviceRef.child("hardwareId").setValue(deviceId);
                 newDeviceRef.child("controllerConnected").onDisconnect().setValue(false);
 
-                // Persist so the QR survives an app close / clear from recents.
                 saveConnectionCode(currentConnectionCode);
 
+                // Arm AFTER the write succeeds so the first listener callback
+                // (which echoes back our own write) is always ignored.
+                // The listener is added here; Firebase will fire once immediately
+                // with {controllerConnected:false, isBlocked:false}. Because
+                // listenerArmed is still false at that exact moment, we skip it.
+                // On the NEXT update (real controller scan) listenerArmed is true
+                // and we transition to Phase 3.
                 startListeningForConnection(currentConnectionCode);
+
             }).addOnFailureListener(e -> {
-                Toast.makeText(getContext(), "Failed to register device", Toast.LENGTH_SHORT).show();
+                if (isAdded())
+                    Toast.makeText(getContext(),
+                            "Failed to register device", Toast.LENGTH_SHORT).show();
             });
+
         } catch (WriterException e) {
-            Toast.makeText(getContext(), "Error generating QR code", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(),
+                    "Error generating QR code", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(),
+                    "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  FIREBASE LISTENER  (Phase 2 → 3 → 4)
+    // ═══════════════════════════════════════════════════════════════════
+
     private void startListeningForConnection(String connectionCode) {
+        // Remove any existing listener first
         if (connectionListener != null && currentConnectionCode != null) {
-            databaseRef.child(currentConnectionCode).removeEventListener(connectionListener);
+            databaseRef.child(currentConnectionCode)
+                    .removeEventListener(connectionListener);
         }
 
         DatabaseReference deviceRef = databaseRef.child(connectionCode);
+
         connectionListener = deviceRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // Node was deleted — that means the TEACHER disconnected this
-                // device on the controller. Wipe everything locally and go back
-                // to the "generate QR" screen.
+                if (!isAdded()) return;
+
+                // ── Teacher-side disconnect (node deleted) ─────────────
                 if (!snapshot.exists()) {
                     if (connectionListener != null) {
                         deviceRef.removeEventListener(connectionListener);
                         connectionListener = null;
                     }
                     currentConnectionCode = null;
+                    listenerArmed = false;
+                    isCurrentlyBlocked = false;
                     clearSavedConnectionCode();
-                    if (controlListener != null) {
+                    if (controlListener != null)
                         controlListener.onDeviceControlStatusChanged(false);
-                    }
                     resetViews();
                     return;
                 }
 
-                Boolean isBlocked   = snapshot.child("isBlocked").getValue(Boolean.class);
-                Boolean isConnected = snapshot.child("controllerConnected").getValue(Boolean.class);
+                // ── Skip the first echo after a fresh generate ─────────
+                // (listenerArmed is false; we flip it and do nothing else)
+                if (!listenerArmed) {
+                    listenerArmed = true;
+                    // We're now in Phase 2 — keep the status as-is.
+                    return;
+                }
 
-                if (isConnected != null && isConnected) {
-                    disconnectButton.setVisibility(View.VISIBLE);
+                // ── Real update from controller ────────────────────────
+                Boolean isBlocked   = snapshot.child("isBlocked")
+                        .getValue(Boolean.class);
+                Boolean isConnected = snapshot.child("controllerConnected")
+                        .getValue(Boolean.class);
+
+                if (Boolean.TRUE.equals(isConnected)) {
                     stopStatusDotPulse();
-                    setStatus(
-                            isBlocked != null && isBlocked ? "Device is blocked" : "Connected — device unblocked",
-                            StatusKind.SUCCESS
-                    );
+                    disconnectButton.setVisibility(View.VISIBLE);
+                    applyPhase(Boolean.TRUE.equals(isBlocked));
+                } else {
+                    // Controller went offline but node still exists →
+                    // fall back to Phase 2
+                    setStatus("Waiting for controller to scan…", StatusKind.WARNING);
+                    startStatusDotPulse();
+                    applyDisconnectButtonState(false); // re-enable
                 }
 
-                if (isBlocked != null && controlListener != null) {
+                if (isBlocked != null && controlListener != null)
                     controlListener.onDeviceControlStatusChanged(isBlocked);
-                }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(getContext(), "Connection error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                if (isAdded())
+                    Toast.makeText(getContext(),
+                            "Connection error: " + error.getMessage(),
+                            Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  PHASE HELPER
+    // ═══════════════════════════════════════════════════════════════════
+
     /**
-     * User tapped Disconnect inside the app. This is one of only two places
-     * that wipes the saved connection code (the other is a teacher-initiated
-     * delete picked up by startListeningForConnection).
+     * Applies Phase 3 (unblocked) or Phase 4 (blocked) and manages
+     * the disconnect button state accordingly.
      */
+    private void applyPhase(boolean blocked) {
+        isCurrentlyBlocked = blocked;
+
+        prefs().edit().putBoolean("is_blocked", blocked).apply();
+
+        if (blocked) {
+            // ── Phase 4: Connected – Device Blocked ───────────────────
+            setStatus("Connected — device blocked", StatusKind.BLOCKED);
+            applyDisconnectButtonState(true); // grey out + disable
+        } else {
+            // ── Phase 3: Connected – Device Unblocked ─────────────────
+            setStatus("Connected — device unblocked", StatusKind.SUCCESS);
+            applyDisconnectButtonState(false); // normal + enabled
+        }
+    }
+
+    /**
+     * Visually disables or re-enables the Disconnect button.
+     * Using alpha + setEnabled is the standard Android pattern for
+     * a "greyed out" button without changing the tonal style.
+     */
+    private void applyDisconnectButtonState(boolean disabled) {
+        disconnectButton.setEnabled(!disabled);
+        disconnectButton.setAlpha(disabled ? 0.38f : 1.0f);
+        // 0.38 is Material Design's standard disabled-state opacity
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  DISCONNECT (user-initiated)
+    // ═══════════════════════════════════════════════════════════════════
+
     private void disconnectController() {
         if (connectionListener != null && currentConnectionCode != null) {
             DatabaseReference deviceRef = databaseRef.child(currentConnectionCode);
             deviceRef.removeEventListener(connectionListener);
-
-            // Cancel onDisconnect so it doesn't fire after we removeValue.
             deviceRef.child("controllerConnected").onDisconnect().cancel();
-
             deviceRef.removeValue().addOnCompleteListener(task -> {
-                connectionListener = null;
+                connectionListener    = null;
                 currentConnectionCode = null;
+                listenerArmed         = false;
+                isCurrentlyBlocked    = false;
                 clearSavedConnectionCode();
                 resetViews();
             });
@@ -438,20 +499,15 @@ public class RestrictFragment extends Fragment {
         }
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        controlListener = null;
-        // NOTE: we do NOT remove the saved code here. Detaching the fragment
-        // (e.g. tab switch, app backgrounded, app killed) should leave the
-        // saved code intact so the next launch can restore the QR.
-        if (connectionListener != null && currentConnectionCode != null) {
-            databaseRef.child(currentConnectionCode).removeEventListener(connectionListener);
-        }
-    }
+    // ═══════════════════════════════════════════════════════════════════
+    //  RESET
+    // ═══════════════════════════════════════════════════════════════════
 
     private void resetViews() {
+        if (!isAdded()) return;
         stopStatusDotPulse();
+        isCurrentlyBlocked = false;
+        applyDisconnectButtonState(false);
         qrCodeImageView.setVisibility(View.GONE);
         qrPlaceholder.setVisibility(View.VISIBLE);
         disconnectButton.setVisibility(View.GONE);
@@ -459,27 +515,38 @@ public class RestrictFragment extends Fragment {
         animateResetIn();
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    //  FRAGMENT LIFECYCLE
+    // ═══════════════════════════════════════════════════════════════════
+
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        if (context instanceof OnDeviceControlListener) {
+        if (context instanceof OnDeviceControlListener)
             controlListener = (OnDeviceControlListener) context;
-        }
     }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        controlListener = null;
+        if (connectionListener != null && currentConnectionCode != null)
+            databaseRef.child(currentConnectionCode)
+                    .removeEventListener(connectionListener);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  DATA CLASS
+    // ═══════════════════════════════════════════════════════════════════
 
     private static class DeviceData {
         public String deviceName;
         public boolean controllerConnected;
         public boolean isBlocked;
 
-        public DeviceData(String deviceName, boolean controllerConnected, boolean isBlocked) {
-            this.deviceName = deviceName;
-            this.controllerConnected = controllerConnected;
-            this.isBlocked = isBlocked;
+        public DeviceData(String n, boolean c, boolean b) {
+            deviceName = n; controllerConnected = c; isBlocked = b;
         }
-
-        public DeviceData() {
-            // Required empty constructor for Firebase
-        }
+        public DeviceData() { }
     }
 }

@@ -25,6 +25,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.example.edulock.R;
+import com.example.edulock.ui.acitvity.OverlayBlockedActivity;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -76,7 +77,40 @@ public class BlockOverlayService extends Service {
     private ValueEventListener blockListener;
     private String connectionCode;
 
+    private static final long ACCESSIBILITY_CHECK_INTERVAL_MS = 3000; // every 3 seconds
+    private final Handler accessibilityWatchdog = new Handler(Looper.getMainLooper());
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final Runnable checkAccessibilityRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isDeviceCurrentlyBlocked() && !isAccessibilityServiceEnabled()) {
+                // Accessibility was killed while blocked — redirect user immediately
+                notifyFirebaseAccessibilityRevoked();
+                launchAccessibilityRedirectOverlay();
+            }
+            // Keep polling
+            accessibilityWatchdog.postDelayed(this, ACCESSIBILITY_CHECK_INTERVAL_MS);
+        }
+    };
+
+    private boolean isDeviceCurrentlyBlocked() {
+        SharedPreferences prefs = getSharedPreferences("EduLock", Context.MODE_PRIVATE);
+        return prefs.getBoolean("is_blocked", false);
+    }
+
+    private void notifyFirebaseAccessibilityRevoked() {
+        SharedPreferences prefs = getSharedPreferences("EduLock", Context.MODE_PRIVATE);
+        String connectionCode = prefs.getString("connection_code", null);
+
+        if (connectionCode == null) return; // No active session, nothing to notify
+
+        FirebaseDatabase.getInstance()
+                .getReference("registered_devices")
+                .child(connectionCode)
+                .child("accessibilityRevoked")
+                .setValue(true);
+    }
 
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
@@ -98,8 +132,29 @@ public class BlockOverlayService extends Service {
         startForeground(NOTIFICATION_ID, createNotification("EduLock is monitoring this device"));
     }
 
+    private boolean isAccessibilityServiceEnabled() {
+        String enabled = Settings.Secure.getString(
+                getContentResolver(),
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        );
+        return enabled != null && enabled.contains(
+                getPackageName() + "/.service.AppBlockerAccessibilityService"
+        );
+    }
+
+    private void launchAccessibilityRedirectOverlay() {
+        // Launch your OverlayBlockedActivity with a message like:
+        // "EduLock permission was disabled. Please re-enable it."
+        Intent intent = new Intent(this, OverlayBlockedActivity.class);
+        intent.putExtra("reason", "accessibility_revoked");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        accessibilityWatchdog.post(checkAccessibilityRunnable);
+
         Log.d(TAG, "onStartCommand");
         startForeground(NOTIFICATION_ID, createNotification("EduLock is monitoring this device"));
 
@@ -148,6 +203,7 @@ public class BlockOverlayService extends Service {
 
     @Override
     public void onDestroy() {
+        accessibilityWatchdog.removeCallbacks(checkAccessibilityRunnable);
         super.onDestroy();
         Log.d(TAG, "onDestroy");
         handler.removeCallbacks(heartbeat);
