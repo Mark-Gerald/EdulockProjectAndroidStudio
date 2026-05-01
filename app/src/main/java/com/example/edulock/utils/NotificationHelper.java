@@ -8,14 +8,21 @@ public class NotificationHelper {
     public static final String CHANNEL_ID = "usage_alert_channel";
 
     public static void createChannel(Context context) {
+        // IMPORTANCE_DEFAULT shows in shade without heads-up popup animation.
+        // IMPORTANCE_HIGH was causing every notification to animate on screen,
+        // which is expensive and was contributing to system lag.
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
                 "Usage Alerts",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_DEFAULT
         );
-        channel.setDescription("Alerts when app usage exceeds limits");
+        channel.setDescription("Alerts when app usage exceeds one hour");
+        channel.enableVibration(false); // No vibration for routine usage alerts
+        channel.setSound(null, null);   // No sound — these are informational only
 
         NotificationManager manager = context.getSystemService(NotificationManager.class);
-        manager.createNotificationChannel(channel);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
+        }
     }
 }
